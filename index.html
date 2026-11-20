@@ -101,6 +101,9 @@ body.mobile #title .sub{display:none}
 body.mobile #title .tag{margin:0 0 0 6px;font-size:8px;padding:2px 5px;vertical-align:4px}
 body.mobile #phaseTag{display:none}
 body.mobile #mini{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px;color:var(--cream);font-variant-numeric:tabular-nums}
+body.mobile #mini{flex-wrap:wrap}
+body.mobile #mini .mbar{flex:0 0 100%;margin:6px 0 0}
+body.mobile #mini .mbar b{display:inline;font-family:'Space Mono';font-weight:bold;font-size:11px;color:var(--cream);letter-spacing:0}
 body.mobile #mini b{font-family:'Bungee';font-weight:normal;font-size:9px;color:var(--orange);letter-spacing:1px;display:block}
 body.mobile #views{left:0;right:0;bottom:0;transform:none;max-width:none;flex-wrap:nowrap;border-width:3px 0 0;border-radius:0;box-shadow:none;padding:8px 8px calc(8px + env(safe-area-inset-bottom));flex-direction:column;align-items:stretch;gap:7px;z-index:4}
 body.mobile .vrow{display:flex;gap:6px;align-items:center}
@@ -247,7 +250,7 @@ $id('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!
  if(b.dataset.t===tab&&!sh.classList.contains('closed'))sh.classList.add('closed');else{tab=b.dataset.t;sh.classList.remove('closed');showTab()}
  if(window.__refit)window.__refit()});
 applyMobile();
-if(window.ResizeObserver)new ResizeObserver(()=>{if(!document.body.classList.contains('mobile'))return;placeSheet();window.__refit&&window.__refit()}).observe($id('views'));
+if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(!document.body.classList.contains('mobile'))return;placeSheet();window.__refit&&window.__refit()});ro.observe($id('views'));ro.observe($id('title'))}
 MQ.addEventListener?MQ.addEventListener('change',()=>{applyMobile();window.__refit&&window.__refit()}):MQ.addListener(()=>{applyMobile();window.__refit&&window.__refit()});
 // ---------- constants ----------
 const AU=149597870.7, MU=1.32712440018e11, DEG=Math.PI/180, C_KMS=299792.458;
@@ -665,7 +668,10 @@ function hud(P,E,M){
  $('elapsed').innerHTML=sim<LAUNCH?'T- '+fmtD(LAUNCH-sim):fmtD(sim-LAUNCH);
  $('remain').innerHTML=sim>=ARRIVAL?'ARRIVÉE ✓':fmtD(ARRIVAL-sim);
  if(document.body.classList.contains('mobile')){const sh=ms=>{ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms/36e5)%24,m=Math.floor(ms/6e4)%60,s=Math.floor(ms/1e3)%60;return d+' j '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')};
-  $('mini').innerHTML='<div><b>Depuis le lancement</b>'+(sim<LAUNCH?'T- '+sh(LAUNCH-sim):sh(sim-LAUNCH))+'</div><div style="text-align:right"><b>Avant Mars</b>'+(sim>=ARRIVAL?'Arrivée ✓':sh(ARRIVAL-sim))+'</div>'}
+  const pc=Math.max(0,Math.min(1,(sim-LAUNCH)/(ARRIVAL-LAUNCH)))*100;
+  $('mini').innerHTML='<div><b>Depuis le lancement</b>'+(sim<LAUNCH?'T- '+sh(LAUNCH-sim):sh(sim-LAUNCH))+'</div>'
+   +'<div style="text-align:right"><b>Avant Mars</b>'+(sim>=ARRIVAL?'Arrivée ✓':sh(ARRIVAL-sim))+'</div>'
+   +'<div class="bar mbar"><i style="width:'+pc+'%"></i><b>'+pc.toFixed(2)+' %</b></div>'}
  const f=Math.max(0,Math.min(1,(sim-LAUNCH)/(ARRIVAL-LAUNCH)));$('prog').style.width=f*100+'%';$('progT').textContent=(f*100).toFixed(2)+' %';
  const de=norm(sub(P.r,E)),dm=norm(sub(P.r,M));
  $('dE').textContent=fkm(de);$('dM').textContent=fkm(dm);$('dS').textContent=(norm(P.r)/AU).toFixed(3)+' UA';
