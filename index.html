@@ -108,7 +108,7 @@ button.on{background:var(--orange);color:var(--ink)}
   </div>
 </div>
 
-<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette ou pincement : zoom centré sur le curseur · glisser ou deux doigts sur le trackpad : déplacer.</div>
+<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette ou pincement : zoom centré sur le curseur · glisser ou deux doigts sur le trackpad : déplacer · clic sur un astre : le suivre. Lunes des géantes : orbites circulaires, positions indicatives. Voyager : direction et distance d'après la NASA, extrapolées.</div>
 </div>
 
 <div class="col" id="rightcol">
@@ -149,6 +149,7 @@ button.on{background:var(--orange);color:var(--ink)}
   <button data-v="earth">Terre + Lune</button>
   <button data-v="probe">MMX</button>
   <button data-v="mars">Mars + Phobos/Deimos</button>
+  <button data-v="voy">Voyager 1 &amp; 2</button>
   <span class="sep"></span>
   <div id="timebox">
     <input type="range" id="slider" min="0" max="1000" step="1">
@@ -198,7 +199,32 @@ const EL={
 // planètes d'habillage : [nom, rayon km, période j, couleur claire, couleur sombre, libellé, taille mini px]
 const DECOR=[['mercury',2439.7,87.969,'#d6d0c8','#6e665e','MERCURE',3],['venus',6051.8,224.70,'#fff0b8','#c9a24a','VÉNUS',4.5],
  ['jupiter',69911,4332.59,'#f3d9b1','#a8744a','JUPITER',9],['saturn',58232,10759.2,'#f7e3a1','#b8913e','SATURNE',7.5],
- ['uranus',25362,30688.5,'#c8f6f4','#4fb3c4','URANUS',5.5],['neptune',24622,60182,'#8fb4ff','#2b4fd1','NEPTUNE',5.5]];
+ ['uranus',25362,30688.5,'#c8f6f4','#4fb3c4','URANUS',5.5],['neptune',24622,60182,'#8fb4ff','#2b4fd1','NEPTUNE',5.5],
+ // planètes naines
+ ['ceres',469.7,1680,'#cfc8bd','#6b655d','CÉRÈS',2.5],['pluto',1188.3,90560,'#f1dcc0','#9a7a5a','PLUTON',3],
+ ['haumea',780,103410,'#e8e8f0','#8a8a9a','HAUMÉA',2.5],['makemake',715,112022,'#e9b9a0','#8c5a48','MAKÉMAKÉ',2.5],
+ ['eris',1163,203830,'#f4f4f4','#9aa0aa','ÉRIS',2.5]];
+const INNER={mercury:1,venus:1,ceres:1};
+EL.pluto=[39.48211675,-0.00031596, 0.24882730,0.00005170, 17.14001206,0.00004818, 238.92903833,145.20780515, 224.06891629,-0.04062942, 110.30393684,-0.01183482];
+// éléments osculateurs (Wikipedia / JPL) : a [UA], e, i, Ω, ω, M [°] à l'époque JD
+const SB={ceres:[2.7675,0.0785,10.59,80.3,73.6,291.4,2459600.5],
+ haumea:[43.116,0.19642,28.21,122.167,239.041,218.205,2459200.5],
+ makemake:[45.43,0.1590,28.98,79.441,296.065,170.497,2461000.5],
+ eris:[67.78,0.4370,44.04,36.02,151.66,205.11,2461000.5]};
+function smallBody(n,ms){const [a0,e,i,Om,w,M0,ep]=SB[n],a=a0*AU,jd=ms/864e5+2440587.5;
+ const M=((M0+0.9856076686/Math.pow(a0,1.5)*(jd-ep))%360)*DEG,E=solveE(M,e),x=a*(Math.cos(E)-e),y=a*Math.sqrt(1-e*e)*Math.sin(E);
+ const cw=Math.cos(w*DEG),sw=Math.sin(w*DEG),cO=Math.cos(Om*DEG),sO=Math.sin(Om*DEG),cI=Math.cos(i*DEG),sI=Math.sin(i*DEG);
+ return [(cw*cO-sw*sO*cI)*x+(-sw*cO-cw*sO*cI)*y,(cw*sO+sw*cO*cI)*x+(-sw*sO+cw*cO*cI)*y,(sw*sI)*x+(cw*sI)*y]}
+const bodyPos=(n,ms)=>SB[n]?smallBody(n,ms):planet(n,ms);
+// lunes principales : [planète, nom, rayon orbital km, période j (négatif = rétrograde), rayon km]
+const MOONS=[['jupiter','IO',421700,1.769,1821],['jupiter','EUROPE',671034,3.551,1561],['jupiter','GANYMÈDE',1070412,7.155,2634],['jupiter','CALLISTO',1882709,16.689,2410],
+ ['saturn','MIMAS',185539,0.942,198],['saturn','ENCELADE',237948,1.370,252],['saturn','TÉTHYS',294619,1.888,531],['saturn','DIONÉ',377396,2.737,561],['saturn','RHÉA',527108,4.518,764],['saturn','TITAN',1221870,15.945,2575],['saturn','JAPET',3560820,79.32,735],
+ ['uranus','MIRANDA',129390,1.413,236],['uranus','ARIEL',190900,2.520,579],['uranus','UMBRIEL',266000,4.144,585],['uranus','TITANIA',435910,8.706,789],['uranus','OBÉRON',583520,13.463,761],
+ ['neptune','TRITON',354759,-5.877,1353],['pluto','CHARON',19591,6.387,606]];
+// Voyager : direction écliptique (lon, lat) quasi fixe depuis le dernier survol, distance au 1/1/2022 + vitesse radiale
+const VOY=[{id:'VOYAGER 1',lon:255.0,lat:35.0,r0:155.36,v:3.58,col:'#7cf0c0',legs:[['earth',Date.UTC(1977,8,5)],['jupiter',Date.UTC(1979,2,5)],['saturn',Date.UTC(1980,10,12)]]},
+ {id:'VOYAGER 2',lon:289.3,lat:-31.2,r0:129.28,v:3.23,col:'#ffb36b',legs:[['earth',Date.UTC(1977,7,20)],['jupiter',Date.UTC(1979,6,9)],['saturn',Date.UTC(1981,7,26)],['uranus',Date.UTC(1986,0,24)],['neptune',Date.UTC(1989,7,25)]]}];
+const voyPos=(v,ms)=>{const r=(v.r0+v.v*(ms-Date.UTC(2022,0,1))/(365.25*864e5))*AU,la=v.lat*DEG,lo=v.lon*DEG;return[r*Math.cos(la)*Math.cos(lo),r*Math.cos(la)*Math.sin(lo),r*Math.sin(la)]};
 function solveE(M,e){let E=e<.8?M:Math.PI;for(let i=0;i<30;i++){const d=(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));E-=d;if(Math.abs(d)<1e-13)break}return E}
 function planet(name,ms){
  const T=(ms/864e5+2440587.5-2451545)/36525, p=EL[name];
@@ -264,9 +290,11 @@ let cam={x:0,y:0,s:Math.min(VW,VH)/(3.6*AU)},target={view:'sys'},goalS=cam.s;
 const stars=[...Array(700)].map(()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.3+.2,p:Math.random()*6,c:Math.random()<.15?'#ffd2a8':Math.random()<.2?'#a8d8ff':'#fff'}));
 
 function viewCenter(){const v=target.view,t=sim;
- if(v==='earth')return planet('earth',t);if(v==='mars')return planet('mars',t);if(v==='probe')return probeState(t).r;return[0,0,0]}
+ if(v==='earth')return planet('earth',t);if(v==='mars')return planet('mars',t);if(v==='probe')return probeState(t).r;if(v.startsWith('b:'))return bodyPos(v.slice(2),t);return[0,0,0]}
 function setView(v){target.view=v;
- const m=Math.min(VW,VH);goalS={solar:m/(62*AU),sys:m/(3.55*AU),earth:m/(2.6*384400),mars:m/(2.8*23463),probe:m/(0.12*AU)}[v];
+ const m=Math.min(VW,VH);if(v.startsWith('b:')){const n=v.slice(2),ms=MOONS.filter(x=>x[0]===n).map(x=>x[2]),d=DECOR.find(x=>x[0]===n);
+  goalS=m/(ms.length?Math.max(...ms)*2.7:Math.max(d[1]*60,2e6));document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));return}
+ goalS={solar:m/(62*AU),sys:m/(3.55*AU),earth:m/(2.6*384400),mars:m/(2.8*23463),voy:m/(330*AU),probe:m/(0.12*AU)}[v];
  document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));}
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>setView(b.dataset.v));
 document.getElementById('live').onclick=()=>{live=true;speed=1;sim=Date.now();marks()};
@@ -302,11 +330,16 @@ let gScale=1;
 cv.addEventListener('gesturestart',e=>{e.preventDefault();gScale=1;gActive=true});
 cv.addEventListener('gesturechange',e=>{e.preventDefault();const f=e.scale/gScale;gScale=e.scale;zoomAt(f,e.clientX||VX,e.clientY||VY)});
 cv.addEventListener('gestureend',e=>{e.preventDefault();gActive=false});
-cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};down={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
  cam.x-=dx/cam.s;cam.y+=dy/cam.s;drag={x:e.clientX,y:e.clientY}});
-cv.addEventListener('pointerup',()=>drag=null);
+let down=null;
+// clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
+cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
+ const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
+ for(const [v,n] of cands){const p=v==='probe'?probeState(sim).r:bodyPos(n,sim),q=S(p),d=Math.hypot(q[0]-e.clientX,q[1]-e.clientY);if(d<bd){bd=d;best=v}}
+ if(best)setView(best)});
 cv.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
  const mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;if(pinch)zoomAt(d/pinch,mx,my);pinch=d}},{passive:false});
 cv.addEventListener('touchend',()=>pinch=null);
@@ -317,7 +350,7 @@ function path(pts,style,width,dash){cx.beginPath();pts.forEach((p,i)=>{const q=S
  cx.strokeStyle=style;cx.lineWidth=width;cx.setLineDash(dash||[]);cx.stroke();cx.setLineDash([])}
 const orbitCache={};
 function orbitPts(n,per){const k=n+Math.floor(sim/864e5/30);if(orbitCache[n]&&orbitCache[n].k===k)return orbitCache[n].p;
- const p=[];for(let i=0;i<=360;i++)p.push(planet(n,sim+per*864e5*i/360));orbitCache[n]={k,p};return p}
+ const p=[];for(let i=0;i<=360;i++)p.push(bodyPos(n,sim+per*864e5*i/360));orbitCache[n]={k,p};return p}
 function circlePts(c,r){const p=[];for(let i=0;i<=120;i++){const a=i/120*2*Math.PI;p.push([c[0]+r*Math.cos(a),c[1]+r*Math.sin(a),0])}return p}
 function label(q,txt,col,dy=-14){cx.font="11px Bungee";cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#0b0d1f';cx.strokeText(txt,q[0],q[1]+dy);cx.fillStyle=col;cx.fillText(txt,q[0],q[1]+dy)}
 function body(p,R,base,shade,name,col,minPx,deco){const q=S(p),r=Math.max(R*cam.s,minPx);
@@ -397,7 +430,7 @@ function frame(now){
  slider.value=Math.max(0,Math.min(1000,(sim-SL0)/(SL1-SL0)*1000));
  // camera
  cam.s*=Math.pow(goalS/cam.s,.08);
- if(target.view!=='free'){const c=viewCenter();cam.x+= (c[0]-cam.x)*.15;cam.y+=(c[1]-cam.y)*.15;
+ if(target.view!=='free'){const c=viewCenter();cam.x+=(c[0]-cam.x)*.25;cam.y+=(c[1]-cam.y)*.25;
   if(Math.abs(c[0]-cam.x)*cam.s<.5){cam.x=c[0];cam.y=c[1]}}
  // background
  cx.fillStyle='#0b0d1f';cx.fillRect(0,0,W,H);
@@ -417,12 +450,28 @@ function frame(now){
  const far=cam.s*AU<45; // vue très large : on allège les éléments du système interne
  // planètes d'habillage (orbites + corps, en retrait)
  for(const [n,R,per,c1,c2,lb,mn] of DECOR){path(orbitPts(n,per),'rgba(255,243,214,.24)',1,[2,5]);
-  const pp=planet(n,sim),dq=S(pp);if(dq[0]<-60||dq[0]>W+60||dq[1]<-60||dq[1]>H+60)continue;
+  const pp=bodyPos(n,sim),dq=S(pp);if(dq[0]<-60||dq[0]>W+60||dq[1]<-60||dq[1]>H+60)continue;
   cx.globalAlpha=.85;const deco=n==='jupiter'?(q,r)=>{if(r<6)return;cx.save();cx.beginPath();cx.arc(q[0],q[1],r,0,7);cx.clip();cx.fillStyle='rgba(150,90,50,.45)';
      for(const b of [-.45,-.15,.2,.5])cx.fillRect(q[0]-r,q[1]+b*r,2*r,r*.13);cx.fillStyle='rgba(200,80,50,.7)';cx.beginPath();cx.ellipse(q[0]+r*.3,q[1]+r*.32,r*.16,r*.09,0,0,7);cx.fill();cx.restore()}
    :n==='saturn'?(q,r)=>{cx.save();cx.strokeStyle='rgba(240,215,150,.9)';cx.lineWidth=Math.max(1.5,r*.22);cx.beginPath();cx.ellipse(q[0],q[1],r*2.1,r*.6,-.35,0,7);cx.stroke();
      cx.strokeStyle='#0b0d1f';cx.lineWidth=1;cx.beginPath();cx.ellipse(q[0],q[1],r*2.1,r*.6,-.35,0,7);cx.stroke();cx.restore()}:null;
-  body(pp,R,c1,c2,far&&R<1e4?null:lb,'rgba(255,243,214,.6)',mn,deco);cx.globalAlpha=1}
+  body(pp,R,c1,c2,(far&&INNER[n])||Math.hypot(dq[0]-sun[0],dq[1]-sun[1])<38?null:lb,'rgba(255,243,214,.6)',mn,deco);cx.globalAlpha=1}
+ // lunes des planètes géantes et de Pluton (orbites circulaires, phases indicatives)
+ for(const [pl,nm,rad,per,R] of MOONS){if(rad*cam.s<9)continue;const c=bodyPos(pl,sim);const cq=S(c);
+  if(cq[0]<-rad*cam.s-40||cq[0]>W+rad*cam.s+40||cq[1]<-rad*cam.s-40||cq[1]>H+rad*cam.s+40)continue;
+  path(circlePts(c,rad),'rgba(255,243,214,.18)',1,[2,4]);const ph=(nm.charCodeAt(0)*7.3+nm.length*1.9)%6.283;
+  body(moon(c,rad,per,ph,sim),R,'#e8e2d6','#7d776d',rad*cam.s>28?nm:null,'rgba(255,243,214,.75)',2.5)}
+ // Voyager 1 & 2
+ for(const v of VOY){const pts=v.legs.map(([n,d])=>planet(n,d));pts.push(voyPos(v,sim));
+  path(pts,v.col+'55',1.2,[6,5]);const q=S(pts[pts.length-1]),dist=norm(pts[pts.length-1])/AU;
+  const inView=q[0]>0&&q[0]<W&&q[1]>0&&q[1]<H;
+  if(inView){cx.save();cx.translate(q[0],q[1]);cx.strokeStyle='#0b0d1f';cx.lineWidth=2;cx.fillStyle='#f3f3f3';
+    cx.beginPath();cx.ellipse(0,0,7,3,-.5,0,7);cx.fill();cx.stroke();cx.beginPath();cx.moveTo(2,1);cx.lineTo(11,8);cx.strokeStyle=v.col;cx.stroke();cx.restore();
+    label(q,v.id,v.col,-12);cx.font='9px Space Mono';cx.fillStyle=v.col;cx.textAlign='center';cx.fillText(dist.toFixed(1)+' UA',q[0],q[1]+18)}
+  else if(far){const a=Math.atan2(q[1]-VY,q[0]-VX),hw=VW/2-30,hh=VH/2-30,k=Math.min(Math.abs(hw/Math.cos(a)),Math.abs(hh/Math.sin(a)));
+    const ex=VX+Math.cos(a)*k,ey=VY+Math.sin(a)*k;cx.save();cx.translate(ex,ey);cx.rotate(a);cx.fillStyle=v.col;cx.strokeStyle='#0b0d1f';cx.lineWidth=2;
+    cx.beginPath();cx.moveTo(12,0);cx.lineTo(-6,-7);cx.lineTo(-6,7);cx.closePath();cx.fill();cx.stroke();cx.restore();
+    label([ex-Math.cos(a)*30,ey-Math.sin(a)*30],v.id+' · '+dist.toFixed(0)+' UA →',v.col,4)}}
  // orbits
  path(orbitPts('earth',365.25),'rgba(65,224,255,.45)',1.5,[2,5]);
  path(orbitPts('mars',686.98),'rgba(255,122,47,.5)',1.5,[2,5]);
@@ -451,7 +500,7 @@ function frame(now){
  const P=probeState(sim),pq=S(P.r),ang=Math.atan2(-P.v[1],P.v[0])+Math.PI/2;
  if(sim>=LAUNCH){
   const pulse=(now/1000)%1.6/1.6;cx.strokeStyle=`rgba(255,79,163,${1-pulse})`;cx.lineWidth=2;cx.beginPath();cx.arc(pq[0],pq[1],(far?8:14)+pulse*(far?16:30),0,7);cx.stroke();
-  drawProbe(cx,pq,far?20:46,Math.atan2(sun[1]-pq[1],sun[0]-pq[0])+Math.PI/2,now,false);
+  if(cam.s*AU<8){cx.fillStyle='#ff4fa3';cx.beginPath();cx.arc(pq[0],pq[1],3,0,7);cx.fill()}else drawProbe(cx,pq,far?20:46,Math.atan2(sun[1]-pq[1],sun[0]-pq[0])+Math.PI/2,now,false);
   if(!far){ // comic callout
   cx.save();cx.translate(pq[0]+34,pq[1]-46);cx.fillStyle='#fff3d6';cx.strokeStyle='#0b0d1f';cx.lineWidth=2.5;
   cx.beginPath();cx.moveTo(0,0);cx.lineTo(64,0);cx.lineTo(64,22);cx.lineTo(14,22);cx.lineTo(-8,36);cx.lineTo(4,22);cx.lineTo(0,22);cx.closePath();cx.fill();cx.stroke();
