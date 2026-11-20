@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MMX Tracker — En route vers Phobos</title>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -83,6 +83,43 @@ button.on{background:var(--orange);color:var(--ink)}
  box-shadow:6px 6px 0 var(--mag);padding:14px 20px;max-width:min(460px,80vw);transition:opacity .25s,transform .25s cubic-bezier(.3,1.6,.5,1)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) rotate(-2deg) scale(1)}
 #toast small{display:block;font-family:'Space Mono';font-weight:700;font-size:12px;margin-top:6px}
+/* ---------- téléphone ---------- */
+.vrow{display:contents}
+#mini,#sheet{display:none}
+body.mobile #leftcol,body.mobile #rightcol,body.mobile .sep{display:none}
+body.mobile #title{position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;width:auto;padding:9px 12px;z-index:4;box-shadow:4px 4px 0 var(--ink),4px 4px 0 2px var(--orange)}
+body.mobile #title h1{font-size:19px;display:inline}
+body.mobile #title .sub{display:none}
+body.mobile #title .tag{margin:0 0 0 6px;font-size:8px;padding:2px 5px;vertical-align:4px}
+body.mobile #phaseTag{display:none}
+body.mobile #mini{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px;color:var(--cream);font-variant-numeric:tabular-nums}
+body.mobile #mini b{font-family:'Bungee';font-weight:normal;font-size:9px;color:var(--orange);letter-spacing:1px;display:block}
+body.mobile #views{left:0;right:0;bottom:0;transform:none;max-width:none;flex-wrap:nowrap;border-width:3px 0 0;border-radius:0;box-shadow:none;padding:8px 8px calc(8px + env(safe-area-inset-bottom));flex-direction:column;align-items:stretch;gap:7px;z-index:4}
+body.mobile .vrow{display:flex;gap:6px;align-items:center}
+body.mobile #vbtns{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 4px 4px 2px}
+body.mobile #vbtns::-webkit-scrollbar{display:none}
+body.mobile #vbtns button{flex:0 0 auto;white-space:nowrap}
+body.mobile #timebox{flex:1 1 0%;width:0;min-width:0!important}
+body.mobile #tbtns button{flex:0 0 auto;padding:6px 6px}
+body.mobile #simdate{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.mobile #views button{font-size:10px;padding:7px 8px;box-shadow:2px 2px 0 var(--orange)}
+body.mobile #sheet{display:block;position:fixed;left:8px;right:8px;z-index:3;background:rgba(17,22,58,.95);border:3px solid var(--cream);border-bottom:0;border-radius:6px 6px 0 0;backdrop-filter:blur(4px)}
+body.mobile #tabs{display:flex}
+body.mobile #tabs button{flex:1;box-shadow:none;border:0;border-right:2px solid rgba(255,243,214,.25);background:transparent;padding:9px 2px;font-size:10px}
+body.mobile #tabs button:last-child{border-right:0}
+body.mobile #tabs button.on{background:var(--orange);color:var(--ink)}
+body.mobile #pane{max-height:min(48vh,420px);overflow:auto;border-top:2px solid var(--cream);padding:10px 12px}
+body.mobile #sheet.closed #pane{display:none}
+body.mobile #sheet.closed #tabs button.on{background:transparent;color:var(--cream)}
+body.mobile #pane>*{display:none}
+body.mobile #pane>.act{display:block}
+body.mobile #pane .panel{position:static!important;width:auto!important;max-height:none!important;overflow:visible!important;box-shadow:none;border:0;padding:0;background:none;backdrop-filter:none}
+body.mobile #pane #note{position:static;font-size:11px;opacity:.85;margin:0}
+body.mobile #probeCv{height:190px}
+body.mobile #scale{top:calc(96px + env(safe-area-inset-top));bottom:auto;left:auto;right:14px;transform:none;text-align:right}
+body.mobile #scale div{margin:2px 0 0 auto}
+@media (max-height:500px){body.mobile #mini{margin-top:2px}body.mobile #title{padding:6px 10px}body.mobile #title h1{font-size:15px}body.mobile #pane{max-height:52vh}body.mobile #views{gap:4px;padding-top:5px}body.mobile #scale{top:80px}}
+body.mobile #toast{top:42%;font-size:15px;max-width:86vw}
 </style>
 </head>
 <body>
@@ -94,7 +131,8 @@ button.on{background:var(--orange);color:var(--ink)}
   <h1>MMX&nbsp;TRACKER</h1>
   <div class="sub">MARTIAN MOONS eXPLORATION · JAXA</div>
   <span class="tag live" id="modeTag">● EN DIRECT</span>
-  <span class="tag" style="background:var(--night)">CROISIÈRE TERRE → MARS</span>
+  <span class="tag" id="phaseTag" style="background:var(--night)">CROISIÈRE TERRE → MARS</span>
+  <div id="mini"></div>
 </div>
 
 <div class="panel" id="stats">
@@ -113,7 +151,7 @@ button.on{background:var(--orange);color:var(--ink)}
   </div>
 </div>
 
-<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette ou pincement : zoom centré sur le curseur · glisser ou deux doigts sur le trackpad : déplacer · clic sur un astre : le suivre. Lunes des géantes : orbites circulaires, positions indicatives. Voyager : direction et distance d'après la NASA, extrapolées.</div>
+<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette ou pincement : zoom centré sur le curseur (ou entre les doigts) · glisser ou deux doigts sur le trackpad : déplacer · clic sur un astre : le suivre. Lunes des géantes : orbites circulaires, positions indicatives. Voyager : direction et distance d'après la NASA, extrapolées.</div>
 </div>
 
 <div class="col" id="rightcol">
@@ -150,13 +188,16 @@ button.on{background:var(--orange);color:var(--ink)}
 <div id="scale"><span id="scaleT"></span><div id="scaleB"></div></div>
 
 <div class="panel" id="views">
+  <div class="vrow" id="vbtns">
   <button data-v="solar">Système solaire</button>
   <button data-v="sys" class="on">Terre → Mars</button>
   <button data-v="earth">Terre + Lune</button>
   <button data-v="probe">MMX</button>
   <button data-v="mars">Mars + Phobos/Deimos</button>
   <button data-v="voy">Voyager 1 &amp; 2</button>
+  </div>
   <span class="sep"></span>
+  <div class="vrow" id="tbtns">
   <div id="timebox">
     <input type="range" id="slider" min="0" max="1000" step="1">
     <div id="simdate"></div>
@@ -166,11 +207,31 @@ button.on{background:var(--orange);color:var(--ink)}
   <button data-s="3600">1 h/s</button>
   <button data-s="86400">1 j/s</button>
   <button data-s="864000">10 j/s</button>
+  </div>
 </div>
+
+<div id="sheet"><div id="tabs"><button data-t="stats" class="on">Données</button><button data-t="probe">Sonde</button><button data-t="miles">Jalons</button><button data-t="note">Infos</button></div><div id="pane"></div></div>
 
 
 <script>
 (()=>{
+// ---------- mise en page téléphone : en-tête compact, barre du bas, tiroir à onglets ----------
+const $id=id=>document.getElementById(id);
+const MQ=matchMedia('(max-width:760px), (max-height:500px) and (max-width:1000px)');
+let tab='stats';
+function placeSheet(){if(!document.body.classList.contains('mobile'))return;$id('sheet').style.bottom=$id('views').offsetHeight-3+'px'}
+function showTab(){for(const el of $id('pane').children)el.classList.toggle('act',el.id===tab);
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab))}
+function applyMobile(){const m=MQ.matches;document.body.classList.toggle('mobile',m);
+ if(m){document.body.appendChild($id('title'));$id('pane').append($id('stats'),$id('probe'),$id('miles'),$id('note'));$id('sheet').classList.add('closed');showTab()}
+ else{const L=$id('leftcol'),R=$id('rightcol');L.append($id('title'),$id('stats'),$id('note'));R.append($id('probe'),$id('miles'))}
+ placeSheet()}
+$id('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const sh=$id('sheet');
+ if(b.dataset.t===tab&&!sh.classList.contains('closed'))sh.classList.add('closed');else{tab=b.dataset.t;sh.classList.remove('closed');showTab()}
+ if(window.__refit)window.__refit()});
+applyMobile();
+if(window.ResizeObserver)new ResizeObserver(()=>{if(!document.body.classList.contains('mobile'))return;placeSheet();window.__refit&&window.__refit()}).observe($id('views'));
+MQ.addEventListener?MQ.addEventListener('change',()=>{applyMobile();window.__refit&&window.__refit()}):MQ.addListener(()=>{applyMobile();window.__refit&&window.__refit()});
 // ---------- constants ----------
 const AU=149597870.7, MU=1.32712440018e11, DEG=Math.PI/180, C_KMS=299792.458;
 const LAUNCH=Date.UTC(2026,9,19,19,41,3), ARRIVAL=Date.UTC(2027,7,15,0,0,0);
@@ -283,6 +344,8 @@ function probeState(ms){
 const cv=document.getElementById('sky'),cx=cv.getContext('2d');let W,H,DPR;
 let VX,VY,VW,VH; // centre et taille de la zone de carte visible entre les panneaux
 function layout(){const vis=el=>el&&getComputedStyle(el).display!=='none'?el.getBoundingClientRect():null;
+ if(document.body.classList.contains('mobile')){placeSheet();const T=$id('title').getBoundingClientRect(),Sh=$id('sheet').getBoundingClientRect();
+  const t=T.bottom+6,b=Sh.top-6;VX=W/2;VY=(t+b)/2;VW=W;VH=Math.max(80,b-t);return}
  const L=vis(document.getElementById('leftcol')),Rr=vis(document.getElementById('rightcol')),B=vis(document.getElementById('views'));
  let l=0,r=W,t=0,b=H;
  if(L&&L.width<W*.5)l=L.right+8; if(Rr&&Rr.width<W*.5)r=Rr.left-8; if(B)b=B.top-8;
@@ -549,7 +612,7 @@ function frame(now){
  const P=probeState(sim),pq=S(P.r),ang=Math.atan2(-P.v[1],P.v[0])+Math.PI/2;
  if(sim>=LAUNCH){
   const pulse=(now/1000)%1.6/1.6;cx.strokeStyle=`rgba(255,79,163,${1-pulse})`;cx.lineWidth=2;cx.beginPath();cx.arc(pq[0],pq[1],(far?8:14)+pulse*(far?16:30),0,7);cx.stroke();
-  if(cam.s*AU<8){cx.fillStyle='#ff4fa3';cx.beginPath();cx.arc(pq[0],pq[1],3,0,7);cx.fill()}else drawProbe(cx,pq,far?20:46,Math.atan2(sun[1]-pq[1],sun[0]-pq[0])+Math.PI/2,now,false);
+  if(cam.s*AU<8){cx.fillStyle='#ff4fa3';cx.beginPath();cx.arc(pq[0],pq[1],3,0,7);cx.fill()}else drawProbe(cx,pq,far?20:(W<760?34:46),Math.atan2(sun[1]-pq[1],sun[0]-pq[0])+Math.PI/2,now,false);
   if(!far){ // comic callout
   cx.save();cx.translate(pq[0]+34,pq[1]-46);cx.fillStyle='#fff3d6';cx.strokeStyle='#0b0d1f';cx.lineWidth=2.5;
   cx.beginPath();cx.moveTo(0,0);cx.lineTo(64,0);cx.lineTo(64,22);cx.lineTo(14,22);cx.lineTo(-8,36);cx.lineTo(4,22);cx.lineTo(0,22);cx.closePath();cx.fill();cx.stroke();
@@ -575,13 +638,15 @@ function hud(P,E,M){
  const $=id=>document.getElementById(id);
  $('elapsed').innerHTML=sim<LAUNCH?'T- '+fmtD(LAUNCH-sim):fmtD(sim-LAUNCH);
  $('remain').innerHTML=sim>=ARRIVAL?'ARRIVÉE ✓':fmtD(ARRIVAL-sim);
+ if(document.body.classList.contains('mobile')){const sh=ms=>{ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms/36e5)%24,m=Math.floor(ms/6e4)%60,s=Math.floor(ms/1e3)%60;return d+' j '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')};
+  $('mini').innerHTML='<div><b>Depuis le lancement</b>'+(sim<LAUNCH?'T- '+sh(LAUNCH-sim):sh(sim-LAUNCH))+'</div><div style="text-align:right"><b>Avant Mars</b>'+(sim>=ARRIVAL?'Arrivée ✓':sh(ARRIVAL-sim))+'</div>'}
  const f=Math.max(0,Math.min(1,(sim-LAUNCH)/(ARRIVAL-LAUNCH)));$('prog').style.width=f*100+'%';$('progT').textContent=(f*100).toFixed(2)+' %';
  const de=norm(sub(P.r,E)),dm=norm(sub(P.r,M));
  $('dE').textContent=fkm(de);$('dM').textContent=fkm(dm);$('dS').textContent=(norm(P.r)/AU).toFixed(3)+' UA';
  $('vS').textContent=norm(P.v).toFixed(2)+' km/s';
  const lt=de/C_KMS;$('lt').textContent=lt<60?lt.toFixed(1)+' s':Math.floor(lt/60)+' min '+Math.round(lt%60)+' s';
  let s=0;for(const a of ARC){if(a[0]>sim)break;s=a[2]}$('arc').textContent=(s/1e6).toFixed(0)+' / '+(ARCLEN/1e6).toFixed(0)+' M km';
- $('simdate').textContent=new Date(sim).toLocaleString('fr-FR',{dateStyle:'full',timeStyle:'medium'});
+ $('simdate').textContent=new Date(sim).toLocaleString('fr-FR',document.body.classList.contains('mobile')?{dateStyle:'medium',timeStyle:'medium'}:{dateStyle:'full',timeStyle:'medium'});
  let next=true;document.querySelectorAll('#mlist li').forEach((li,i)=>{const d=MILES[i][0]<=sim;li.className=d?'done':next?(next=false,'next'):''});
 }
 document.getElementById('mlist').innerHTML=MILES.map(m=>`<li><b>${new Date(m[0]).toLocaleDateString('fr-FR',{month:'short',year:'numeric',day:m[0]<=ARRIVAL?'numeric':undefined})}</b>${m[1]} — <span style="opacity:.7">${m[2]}</span></li>`).join('');
@@ -707,7 +772,8 @@ const DR={
 };
 function drawInst(t){g.clearRect(0,0,560,360);g.fillStyle='rgba(255,255,255,.7)';pstars.forEach(s=>g.fillRect(s[0],s[1]*.9,s[2],s[2]));g.lineJoin='round';DR[curInst.kind](t)}
 
-addEventListener('resize',()=>{resize();if(target.view!=='free')setView(target.view)});
+window.__refit=()=>{resize();if(target.view!=='free')setView(target.view)};
+addEventListener('resize',window.__refit);
 marks();setView('sys');cam.s=goalS;requestAnimationFrame(frame);
 // recale une fois les polices chargées (la taille des panneaux peut changer)
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{layout();if(target.view!=='free'){setView(target.view);cam.s=goalS}});
