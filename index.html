@@ -9,7 +9,7 @@
 :root{--ink:#0b0d1f;--night:#11163a;--cream:#fff3d6;--orange:#ff7a2f;--red:#e8433a;--cyan:#41e0ff;--yellow:#ffd23f;--mag:#ff4fa3}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--ink);color:var(--cream);font-family:'Space Mono',monospace;overflow:hidden}
-#sky{position:fixed;inset:0;display:block;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+#sky{position:fixed;inset:0;width:100vw;height:100vh;display:block;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 #sky:active{cursor:grabbing}
 .halftone{position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,243,214,.06) 1px,transparent 1.3px);background-size:6px 6px;mix-blend-mode:screen}
 .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65))}
@@ -79,10 +79,10 @@ button.on{background:var(--orange);color:var(--ink)}
 @media (max-width:1250px){#rightcol{width:270px}#leftcol{width:300px}.big{font-size:20px}}
 @media (max-width:900px){#rightcol,#note{display:none}#leftcol{width:auto;right:20px;bottom:150px}#title h1{font-size:22px}}
 #toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-2deg) scale(.6);opacity:0;pointer-events:none;z-index:5;
- font-family:'Bungee';font-size:18px;line-height:1.3;text-align:center;color:var(--ink);background:var(--yellow);border:3px solid var(--ink);
+ font-family:'Bungee';font-weight:700;font-size:18px;line-height:1.3;text-align:center;color:var(--ink);background:var(--yellow);border:3px solid var(--ink);
  box-shadow:6px 6px 0 var(--mag);padding:14px 20px;max-width:min(460px,80vw);transition:opacity .25s,transform .25s cubic-bezier(.3,1.6,.5,1)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) rotate(-2deg) scale(1)}
-#toast small{display:block;font-family:'Space Mono';font-size:11px;margin-top:6px}
+#toast small{display:block;font-family:'Space Mono';font-weight:700;font-size:12px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -346,7 +346,7 @@ let down=null;
 // message affiché tant qu'on est au dézoom maximal (au-delà des Voyager)
 const minScale=()=>Math.min(VW,VH)/(420*AU);
 const toastEl=document.getElementById('toast');
-toastEl.innerHTML="Fin du système solaire (ou presque).<small>Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte.</small>";
+toastEl.innerHTML="Fin du système solaire.<small>Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte.</small>";
 // clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
 cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
  const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
@@ -375,6 +375,28 @@ function body(p,R,base,shade,name,col,minPx,deco){const q=S(p),r=Math.max(R*cam.
  if(deco)deco(q,r,sx,sy);
  cx.lineWidth=Math.max(1.5,Math.min(3,r/8));cx.strokeStyle='#0b0d1f';cx.stroke();
  if(name)label(q,name,col,-r-8);return q}
+
+function drawVoyager(c,q,ang,k,col,t){ // Voyager : grande antenne (face au Soleil/Terre), bus décagonal, RTG, perche science, magnétomètre
+ c.save();c.translate(q[0],q[1]);c.rotate(ang);c.scale(k,k);c.lineJoin='round';c.lineCap='round';
+ const ol=(f,w=1.6)=>{c.fillStyle=f;c.fill();c.lineWidth=w;c.strokeStyle='#0b0d1f';c.stroke()};
+ const ln=(a,b,w,s)=>{c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.lineWidth=w;c.strokeStyle=s||'#0b0d1f';c.stroke()};
+ // magnétomètre (longue perche fine) et antennes radio
+ ln([-3,3],[-15,22],.8,'#c9c9d6');ln([-3,-3],[-17,-15],.6,'#c9c9d6');ln([-3,-3],[-12,-21],.6,'#c9c9d6');
+ // perche RTG (3 générateurs)
+ ln([-4,4],[-6,13],1.6);for(let i=0;i<3;i++){c.beginPath();c.rect(-8.5-i*1.2,10+i*3,4,2.6);ol('#6b6f80',1)}
+ // perche science + plate-forme de scan (caméras)
+ ln([-4,-4],[-10,-11],1.6);c.beginPath();c.rect(-14,-15,6,5);ol('#e8b23a',1.2);c.beginPath();c.arc(-11,-15.5,1.3,0,7);ol('#41e0ff',1);
+ // bus décagonal
+ c.beginPath();for(let i=0;i<10;i++){const a=i/10*2*Math.PI;c.lineTo(-4+Math.cos(a)*4.6,Math.sin(a)*4.6)}c.closePath();ol('#d9dde8');
+ c.fillStyle='#e8b23a';c.fillRect(-6,-1.5,4,3);
+ // grande antenne parabolique (3,7 m), vue de profil, tournée vers le Soleil
+ c.beginPath();c.moveTo(1,-11);c.quadraticCurveTo(7,0,1,11);c.lineTo(2.5,11);c.quadraticCurveTo(9.5,0,2.5,-11);c.closePath();ol('#f6f4ee');
+ c.beginPath();c.moveTo(1.6,-10);c.quadraticCurveTo(7.4,0,1.6,10);c.lineWidth=.6;c.strokeStyle='rgba(0,0,0,.25)';c.stroke();
+ ln([4,0],[11,0],1);ln([4,-6],[11,0],.6);ln([4,6],[11,0],.6);c.beginPath();c.arc(11,0,1.4,0,7);ol(col,1);
+ // signal radio vers la Terre
+ const p=(t/1400)%1;c.strokeStyle=col;c.globalAlpha=1-p;c.lineWidth=1.4;for(const d of [0,.33]){const r=14+((p+d)%1)*14;c.beginPath();c.arc(4,0,r,-.35,.35);c.stroke()}c.globalAlpha=1;
+ c.restore();
+}
 
 function drawProbe(c,cxs,size,ang,t,big){ // MMX : propulsion (haut) · retour (milieu, HGA + panneaux + capsule) · exploration (bas, jambes)
  c.save();c.translate(cxs[0],cxs[1]);c.rotate(ang);const s=size/60;c.scale(s,s);c.lineJoin='round';c.lineCap='round';
@@ -477,9 +499,10 @@ function frame(now){
  for(const v of VOY){const pts=v.legs.map(([n,d])=>planet(n,d));pts.push(voyPos(v,sim));
   const q=S(pts[pts.length-1]),dist=norm(pts[pts.length-1])/AU;
   const inView=q[0]>0&&q[0]<W&&q[1]>0&&q[1]<H;
-  if(inView){cx.save();cx.translate(q[0],q[1]);cx.strokeStyle='#0b0d1f';cx.lineWidth=2;cx.fillStyle='#f3f3f3';
-    cx.beginPath();cx.ellipse(0,0,7,3,-.5,0,7);cx.fill();cx.stroke();cx.beginPath();cx.moveTo(2,1);cx.lineTo(11,8);cx.strokeStyle=v.col;cx.stroke();cx.restore();
-    label(q,v.id,v.col,-12);cx.font='9px Space Mono';cx.fillStyle=v.col;cx.textAlign='center';cx.fillText(dist.toFixed(1)+' UA',q[0],q[1]+18)}
+  if(inView){const g=cx.createRadialGradient(q[0],q[1],0,q[0],q[1],46);g.addColorStop(0,v.col+'55');g.addColorStop(1,v.col+'00');cx.fillStyle=g;cx.beginPath();cx.arc(q[0],q[1],46,0,7);cx.fill();
+    drawVoyager(cx,q,Math.atan2(sun[1]-q[1],sun[0]-q[0]),1.7,v.col,now);
+    label(q,v.id,v.col,-42);
+    cx.font='bold 10px Space Mono';cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#0b0d1f';const tx=dist.toFixed(1)+' UA';cx.strokeText(tx,q[0],q[1]+48);cx.fillStyle=v.col;cx.fillText(tx,q[0],q[1]+48)}
   else if(far){const a=Math.atan2(q[1]-VY,q[0]-VX),hw=VW/2-30,hh=VH/2-30,k=Math.min(Math.abs(hw/Math.cos(a)),Math.abs(hh/Math.sin(a)));
     const ex=VX+Math.cos(a)*k,ey=VY+Math.sin(a)*k;cx.save();cx.translate(ex,ey);cx.rotate(a);cx.fillStyle=v.col;cx.strokeStyle='#0b0d1f';cx.lineWidth=2;
     cx.beginPath();cx.moveTo(12,0);cx.lineTo(-6,-7);cx.lineTo(-6,7);cx.closePath();cx.fill();cx.stroke();cx.restore();
