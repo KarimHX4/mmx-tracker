@@ -362,13 +362,13 @@ const cv=document.getElementById('sky'),cx=cv.getContext('2d');let W,H,DPR;
 let VX,VY,VW,VH; // centre et taille de la zone de carte visible entre les panneaux
 function layout(){const vis=el=>el&&getComputedStyle(el).display!=='none'?el.getBoundingClientRect():null;
  if(document.body.classList.contains('mobile')){placeSheet();const T=$id('title').getBoundingClientRect(),Sh=$id('sheet').getBoundingClientRect();
-  const t=T.bottom+6,b=Sh.top-6;VX=W/2;VY=(t+b)/2;VW=W;VH=Math.max(80,b-t);return}
+  const t=T.bottom+6,b=Sh.top-6;VX=W/2;VY=(t+b)/2;VW=Math.max(60,W);VH=Math.max(80,b-t);return}
  const L=vis(document.getElementById('leftcol')),Rr=vis(document.getElementById('rightcol')),B=vis(document.getElementById('views'));
  let l=0,r=W,t=0,b=H;
  if(L&&L.width<W*.5)l=L.right+8; if(Rr&&Rr.width<W*.5)r=Rr.left-8; if(B)b=B.top-8;
  if(L&&L.width>=W*.5){const st=document.getElementById('stats').getBoundingClientRect();if(b-st.bottom>H*.2)t=st.bottom+8} // mobile : panneaux en haut
  if(r-l<W*.35){l=0;r=W} if(b-t<H*.2){t=0;b=H}
- VX=(l+r)/2;VY=(t+b)/2;VW=r-l;VH=b-t}
+ VX=(l+r)/2;VY=(t+b)/2;VW=Math.max(60,r-l);VH=Math.max(60,b-t)}
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);layout()}
 resize();
 let live=true,speed=1,sim=Date.now(),lastReal=performance.now();
@@ -378,7 +378,7 @@ const stars=[...Array(700)].map(()=>({x:Math.random(),y:Math.random(),r:Math.ran
 function viewCenter(){const v=target.view,t=sim;
  if(v==='earth')return planet('earth',t);if(v==='mars')return planet('mars',t);if(v==='probe')return probeState(t).r;if(v.startsWith('b:'))return bodyPos(v.slice(2),t);return[0,0,0]}
 function setView(v){target.view=v;
- const m=Math.min(VW,VH);if(v.startsWith('b:')){const n=v.slice(2),ms=MOONS.filter(x=>x[0]===n).map(x=>x[2]),d=DECOR.find(x=>x[0]===n);
+ const m=Math.max(60,Math.min(VW,VH)||0);if(v.startsWith('b:')){const n=v.slice(2),ms=MOONS.filter(x=>x[0]===n).map(x=>x[2]),d=DECOR.find(x=>x[0]===n);
   goalS=m/(ms.length?Math.max(...ms)*2.7:Math.max(d[1]*60,2e6));document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));return}
  goalS={solar:m/(62*AU),sys:m/(3.55*AU),earth:m/(2.6*384400),mars:m/(2.8*23463),voy:m/(330*AU),probe:m/(0.12*AU)}[v];
  document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));}
@@ -541,7 +541,17 @@ function drawProbe(c,cxs,size,ang,t,big){ // MMX : propulsion (haut) · retour (
  c.restore();
 }
 
-function frame(now){
+let frameErr=0;
+function frame(now){try{drawFrame(now)}catch(e){if(frameErr++<3)console.error(e);
+ // remise à zéro de la caméra si un calcul a dérapé (ex. fenêtre de taille nulle au lancement de l'app)
+ resize();cam.x=0;cam.y=0;target.view='sys';setView('sys');cam.s=goalS}
+ requestAnimationFrame(frame)}
+function drawFrame(now){
+ if(!(innerWidth>0&&innerHeight>0))return;
+ if(W!==innerWidth||H!==innerHeight||!(VW>0&&VH>0)){resize();if(target.view!=='free')setView(target.view)}
+ if(!(goalS>0&&isFinite(goalS)))setView(target.view==='free'?'sys':target.view);
+ if(!(cam.s>0&&isFinite(cam.s)))cam.s=goalS;
+ if(!isFinite(cam.x)||!isFinite(cam.y)){cam.x=0;cam.y=0}
  const dt=now-lastReal;lastReal=now;
  if(live)sim=Date.now();else{sim+=dt*speed;if(sim>SL1)sim=SL1}
  slider.value=Math.max(0,Math.min(1000,(sim-SL0)/(SL1-SL0)*1000));
@@ -645,8 +655,7 @@ function frame(now){
   if(rc>rmax){const k=rmax/rc;if(target.view==='free'&&!drag){cam.x+=(cam.x*k-cam.x)*.35;cam.y+=(cam.y*k-cam.y)*.35}else{cam.x*=k;cam.y*=k}}}
  hud(P,E,M);
  if(curInst)drawInst(now);else probeCard(now);
- requestAnimationFrame(frame);
-}
+ }
 
 const fmtD=ms=>{ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms/36e5)%24,m=Math.floor(ms/6e4)%60,s=Math.floor(ms/1e3)%60;
  return `${d}<small>j</small> ${String(h).padStart(2,'0')}<small>h</small> ${String(m).padStart(2,'0')}<small>m</small> ${String(s).padStart(2,'0')}<small>s</small>`};
