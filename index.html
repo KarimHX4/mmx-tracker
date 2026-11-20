@@ -290,14 +290,17 @@ const DECOR=[['mercury',2439.7,87.969,'#d6d0c8','#6e665e','MERCURE',3],['venus',
  // planètes naines
  ['ceres',469.7,1680,'#cfc8bd','#6b655d','CÉRÈS',2.5],['pluto',1188.3,90560,'#f1dcc0','#9a7a5a','PLUTON',3],
  ['haumea',780,103410,'#e8e8f0','#8a8a9a','HAUMÉA',2.5],['makemake',715,112022,'#e9b9a0','#8c5a48','MAKÉMAKÉ',2.5],
- ['eris',1163,203830,'#f4f4f4','#9aa0aa','ÉRIS',2.5]];
-const INNER={mercury:1,venus:1,ceres:1};
+ ['eris',1163,203830,'#f4f4f4','#9aa0aa','ÉRIS',2.5],
+ // astéroïde de la ceinture principale nommé en 2026 d'après Robin Sultana (LIRA, Observatoire de Paris)
+ ['sultana',7.4,2056,'#ffc6e6','#c2407f','(20736) SULTANA',3]];
+const INNER={mercury:1,venus:1,ceres:1,sultana:1};
 EL.pluto=[39.48211675,-0.00031596, 0.24882730,0.00005170, 17.14001206,0.00004818, 238.92903833,145.20780515, 224.06891629,-0.04062942, 110.30393684,-0.01183482];
 // éléments osculateurs (Wikipedia / JPL) : a [UA], e, i, Ω, ω, M [°] à l'époque JD
 const SB={ceres:[2.7675,0.0785,10.59,80.3,73.6,291.4,2459600.5],
  haumea:[43.116,0.19642,28.21,122.167,239.041,218.205,2459200.5],
  makemake:[45.43,0.1590,28.98,79.441,296.065,170.497,2461000.5],
- eris:[67.78,0.4370,44.04,36.02,151.66,205.11,2461000.5]};
+ eris:[67.78,0.4370,44.04,36.02,151.66,205.11,2461000.5],
+ sultana:[3.16441,0.05617,8.59,67.18,4.6,106.9,2458200.5]};
 function smallBody(n,ms){const [a0,e,i,Om,w,M0,ep]=SB[n],a=a0*AU,jd=ms/864e5+2440587.5;
  const M=((M0+0.9856076686/Math.pow(a0,1.5)*(jd-ep))%360)*DEG,E=solveE(M,e),x=a*(Math.cos(E)-e),y=a*Math.sqrt(1-e*e)*Math.sin(E);
  const cw=Math.cos(w*DEG),sw=Math.sin(w*DEG),cO=Math.cos(Om*DEG),sO=Math.sin(Om*DEG),cI=Math.cos(i*DEG),sI=Math.sin(i*DEG);
@@ -587,13 +590,15 @@ function drawFrame(now){
  }
  const far=cam.s*AU<45; // vue très large : on allège les éléments du système interne
  // planètes d'habillage (orbites + corps, en retrait)
- for(const [n,R,per,c1,c2,lb,mn] of DECOR){path(orbitPts(n,per),'rgba(255,243,214,.24)',1,[2,5]);
+ for(const [n,R,per,c1,c2,lb,mn] of DECOR){path(orbitPts(n,per),n==='sultana'?'rgba(255,79,163,.5)':'rgba(255,243,214,.24)',n==='sultana'?1.4:1,[2,5]);
   const pp=bodyPos(n,sim),dq=S(pp);if(dq[0]<-60||dq[0]>W+60||dq[1]<-60||dq[1]>H+60)continue;
   cx.globalAlpha=.85;const deco=n==='jupiter'?(q,r)=>{if(r<6)return;cx.save();cx.beginPath();cx.arc(q[0],q[1],r,0,7);cx.clip();cx.fillStyle='rgba(150,90,50,.45)';
      for(const b of [-.45,-.15,.2,.5])cx.fillRect(q[0]-r,q[1]+b*r,2*r,r*.13);cx.fillStyle='rgba(200,80,50,.7)';cx.beginPath();cx.ellipse(q[0]+r*.3,q[1]+r*.32,r*.16,r*.09,0,0,7);cx.fill();cx.restore()}
    :n==='saturn'?(q,r)=>{cx.save();cx.strokeStyle='rgba(240,215,150,.9)';cx.lineWidth=Math.max(1.5,r*.22);cx.beginPath();cx.ellipse(q[0],q[1],r*2.1,r*.6,-.35,0,7);cx.stroke();
      cx.strokeStyle='#0b0d1f';cx.lineWidth=1;cx.beginPath();cx.ellipse(q[0],q[1],r*2.1,r*.6,-.35,0,7);cx.stroke();cx.restore()}:null;
-  body(pp,R,c1,c2,(far&&INNER[n])||Math.hypot(dq[0]-sun[0],dq[1]-sun[1])<38?null:lb,'rgba(255,243,214,.6)',mn,deco);cx.globalAlpha=1}
+  body(pp,R,c1,c2,(far&&INNER[n])||Math.hypot(dq[0]-sun[0],dq[1]-sun[1])<38?null:lb,n==='sultana'?'#ff4fa3':'rgba(255,243,214,.6)',mn,deco);
+  if(n==='sultana'&&!(far&&INNER[n])){const k=7+2*Math.sin(now/400);cx.save();cx.translate(dq[0],dq[1]);cx.rotate(now/3000);cx.fillStyle='#ff4fa3';cx.beginPath();
+   for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?k*.3:k;cx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cx.closePath();cx.globalAlpha=.55;cx.fill();cx.restore();cx.globalAlpha=.85}cx.globalAlpha=1}
  // nuage d'Oort (apparaît en dézoomant au-delà des Voyager)
  {const al=Math.max(0,Math.min(1,(0.4-cam.s*AU)/0.35));if(al>0){
   cx.globalAlpha=al;for(const [x,y,r,tw] of OORT){const q=S([x,y,0]);if(q[0]<-2||q[0]>W+2||q[1]<-2||q[1]>H+2)continue;
