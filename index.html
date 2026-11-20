@@ -446,8 +446,14 @@ cv.addEventListener('touchend',()=>pinch=null);
 
 // ---------- drawing ----------
 const S=(p)=>[VX+(p[0]-cam.x)*cam.s,VY-(p[1]-cam.y)*cam.s];
-function path(pts,style,width,dash){cx.beginPath();pts.forEach((p,i)=>{const q=S(p);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1])});
- cx.strokeStyle=style;cx.lineWidth=width;cx.setLineDash(dash||[]);cx.stroke();cx.setLineDash([])}
+// tracé découpé à l'écran : au fort zoom, une orbite fait des milliards de pixels ; la dessiner entière (surtout en pointillés) ralentit ou plante le navigateur
+function clipSeg(x0,y0,x1,y1,a,b,c,d){let t0=0,t1=1;const dx=x1-x0,dy=y1-y0;
+ for(const [p,q] of [[-dx,x0-a],[dx,c-x0],[-dy,y0-b],[dy,d-y0]]){if(p===0){if(q<0)return null}else{const r=q/p;if(p<0){if(r>t1)return null;if(r>t0)t0=r}else{if(r<t0)return null;if(r<t1)t1=r}}}
+ return [x0+t0*dx,y0+t0*dy,x0+t1*dx,y0+t1*dy]}
+function path(pts,style,width,dash){const m=60,a=-m,b=-m,c=W+m,d=H+m;cx.beginPath();let prev=null,px=NaN,py=NaN,any=false;
+ for(const p of pts){const q=S(p);if(prev){const r=clipSeg(prev[0],prev[1],q[0],q[1],a,b,c,d);
+   if(r){if(Math.abs(r[0]-px)>.5||Math.abs(r[1]-py)>.5)cx.moveTo(r[0],r[1]);cx.lineTo(r[2],r[3]);px=r[2];py=r[3];any=true}}prev=q}
+ if(!any)return;cx.strokeStyle=style;cx.lineWidth=width;cx.setLineDash(dash||[]);cx.stroke();cx.setLineDash([])}
 const orbitCache={};
 function orbitPts(n,per){const k=n+Math.floor(sim/864e5/30);if(orbitCache[n]&&orbitCache[n].k===k)return orbitCache[n].p;
  const p=[];for(let i=0;i<=360;i++)p.push(bodyPos(n,sim+per*864e5*i/360));orbitCache[n]={k,p};return p}
@@ -571,12 +577,14 @@ function drawFrame(now){
  // grid rings (AU)
  const sun=S([0,0,0]);
  // sun
- const sr=Math.max(R_SUN*cam.s,9);
+ const sr=Math.max(R_SUN*cam.s,9),sunVis=sun[0]>-sr*5&&sun[0]<W+sr*5&&sun[1]>-sr*5&&sun[1]<H+sr*5;
+ if(sunVis){
  const sg=cx.createRadialGradient(sun[0],sun[1],0,sun[0],sun[1],sr*5);sg.addColorStop(0,'rgba(255,230,140,.9)');sg.addColorStop(.25,'rgba(255,150,50,.35)');sg.addColorStop(1,'rgba(255,120,40,0)');
  cx.fillStyle=sg;cx.beginPath();cx.arc(sun[0],sun[1],sr*5,0,7);cx.fill();
  cx.save();cx.translate(sun[0],sun[1]);cx.rotate(now/8000);cx.fillStyle='#ffd23f';cx.strokeStyle='#0b0d1f';cx.lineWidth=2;
  cx.beginPath();for(let i=0;i<24;i++){const a=i/24*2*Math.PI,rr=i%2?sr:sr*1.35;cx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}cx.closePath();cx.fill();cx.stroke();cx.restore();
  if(cam.s*AU>=45)label(sun,'SOLEIL','#ffd23f',-sr*1.4-6);
+ }
  const far=cam.s*AU<45; // vue très large : on allège les éléments du système interne
  // planètes d'habillage (orbites + corps, en retrait)
  for(const [n,R,per,c1,c2,lb,mn] of DECOR){path(orbitPts(n,per),'rgba(255,243,214,.24)',1,[2,5]);
@@ -591,7 +599,7 @@ function drawFrame(now){
   cx.globalAlpha=al;for(const [x,y,r,tw] of OORT){const q=S([x,y,0]);if(q[0]<-2||q[0]>W+2||q[1]<-2||q[1]>H+2)continue;
    cx.fillStyle=tw<.15?'#a8d8ff':'#d9e4ff';cx.globalAlpha=al*(.4+.5*Math.abs(Math.sin(now/2200+tw*20)));cx.fillRect(q[0],q[1],r,r)}
   cx.globalAlpha=al*.5;cx.setLineDash([3,7]);cx.strokeStyle='#a8d8ff';cx.lineWidth=1;
-  for(const R of [2000,100000]){cx.beginPath();cx.arc(sun[0],sun[1],R*AU*cam.s,0,7);cx.stroke()}cx.setLineDash([]);
+  for(const R of [2000,100000]){if(R*AU*cam.s>2e4)continue;cx.beginPath();cx.arc(sun[0],sun[1],R*AU*cam.s,0,7);cx.stroke()}cx.setLineDash([]);
   cx.globalAlpha=al;const rr=100000*AU*cam.s;
   label([sun[0],sun[1]-rr*.72],"NUAGE D'OORT",'#a8d8ff',0);
   cx.font='bold 10px Space Mono';cx.textAlign='center';cx.fillStyle='#a8d8ff';cx.fillText('~2 000 – 100 000 UA · réservoir des comètes à longue période',sun[0],sun[1]-rr*.72+16);
