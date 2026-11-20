@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MMX Tracker — En route vers Phobos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#11163a">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MMX Tracker">
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#0b0d1f;--night:#11163a;--cream:#fff3d6;--orange:#ff7a2f;--red:#e8433a;--cyan:#41e0ff;--yellow:#ffd23f;--mag:#ff4fa3}
@@ -120,6 +128,8 @@ body.mobile #scale{top:calc(96px + env(safe-area-inset-top));bottom:auto;left:au
 body.mobile #scale div{margin:2px 0 0 auto}
 @media (max-height:500px){body.mobile #mini{margin-top:2px}body.mobile #title{padding:6px 10px}body.mobile #title h1{font-size:15px}body.mobile #pane{max-height:52vh}body.mobile #views{gap:4px;padding-top:5px}body.mobile #scale{top:80px}}
 body.mobile #toast{top:42%;font-size:15px;max-width:86vw}
+#installBtn{margin:10px 0 0 6px;font-size:9px;padding:4px 7px;background:var(--cyan);color:var(--ink);box-shadow:2px 2px 0 var(--orange)}
+body.mobile #installBtn{margin:0 0 0 6px;vertical-align:4px;font-size:8px;padding:3px 6px}
 </style>
 </head>
 <body>
@@ -131,6 +141,7 @@ body.mobile #toast{top:42%;font-size:15px;max-width:86vw}
   <h1>MMX&nbsp;TRACKER</h1>
   <div class="sub">MARTIAN MOONS eXPLORATION · JAXA</div>
   <span class="tag live" id="modeTag">● EN DIRECT</span>
+  <button id="installBtn" hidden>⬇ Installer l'app</button>
   <span class="tag" id="phaseTag" style="background:var(--night)">CROISIÈRE TERRE → MARS</span>
   <div id="mini"></div>
 </div>
@@ -778,6 +789,14 @@ marks();setView('sys');cam.s=goalS;requestAnimationFrame(frame);
 // recale une fois les polices chargées (la taille des panneaux peut changer)
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{layout();if(target.view!=='free'){setView(target.view);cam.s=goalS}});
 })();
+</script>
+<script>
+// application installable (PWA) : hors ligne + bouton d'installation quand le navigateur le propose (Android, Chrome, Edge)
+if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+let deferredPrompt=null;const ib=document.getElementById('installBtn');
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;ib.hidden=false});
+ib.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice.catch(()=>{});deferredPrompt=null;ib.hidden=true});
+addEventListener('appinstalled',()=>{ib.hidden=true});
 </script>
 </body>
 </html>

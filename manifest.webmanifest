@@ -1,0 +1,16 @@
+{
+  "name": "MMX Tracker — En route vers Phobos",
+  "short_name": "MMX Tracker",
+  "description": "Suivi en direct (calculé) de la sonde MMX de la JAXA vers Mars, Phobos et Deimos.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d1f",
+  "theme_color": "#11163a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
