@@ -78,6 +78,11 @@ button.on{background:var(--orange);color:var(--ink)}
 #views{z-index:3}
 @media (max-width:1250px){#rightcol{width:270px}#leftcol{width:300px}.big{font-size:20px}}
 @media (max-width:900px){#rightcol,#note{display:none}#leftcol{width:auto;right:20px;bottom:150px}#title h1{font-size:22px}}
+#toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-2deg) scale(.6);opacity:0;pointer-events:none;z-index:5;
+ font-family:'Bungee';font-size:18px;line-height:1.3;text-align:center;color:var(--ink);background:var(--yellow);border:3px solid var(--ink);
+ box-shadow:6px 6px 0 var(--mag);padding:14px 20px;max-width:min(460px,80vw);transition:opacity .25s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+#toast.show{opacity:1;transform:translate(-50%,-50%) rotate(-2deg) scale(1)}
+#toast small{display:block;font-family:'Space Mono';font-size:11px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -141,6 +146,7 @@ button.on{background:var(--orange);color:var(--ink)}
 
 </div>
 
+<div id="toast"></div>
 <div id="scale"><span id="scaleT"></span><div id="scaleB"></div></div>
 
 <div class="panel" id="views">
@@ -310,7 +316,9 @@ let drag=null,pinch=null;
 const toW=(px,py)=>[cam.x+(px-VX)/cam.s,cam.y-(py-VY)/cam.s];
 function freeView(){if(target.view!=='free'){target.view='free';document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'))}}
 function zoomAt(f,px,py){ // zoom centré sur le curseur : le point du monde sous la souris reste fixe
- freeView();const [wx,wy]=toW(px,py);cam.s*=f;goalS=cam.s;
+ freeView();const [wx,wy]=toW(px,py);const minS=Math.min(VW,VH)/(420*AU),maxS=3;
+ if(cam.s*f<minS){if(f<1)tooFar();f=minS/cam.s}else if(cam.s*f>maxS)f=maxS/cam.s;
+ cam.s*=f;goalS=cam.s;
  cam.x=wx-(px-VX)/cam.s;cam.y=wy+(py-VY)/cam.s}
 // molette / trackpad : normalise les unités (Firefox macOS = lignes), gère le pincement trackpad (ctrlKey) et le défilement horizontal
 let gActive=false,lastPad=0;
@@ -335,6 +343,15 @@ cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
  cam.x-=dx/cam.s;cam.y+=dy/cam.s;drag={x:e.clientX,y:e.clientY}});
 let down=null;
+// message quand on dézoome au-delà des Voyager
+const JOKES=[["Trop loin pour l'humanité !","Même Voyager 1 n'est pas allée plus loin. Inutile de continuer à dézoomer."],
+ ["Ici s'arrête la carte.","Au-delà : 49 ans de voyage à 17 km/s… et toujours personne."],
+ ["Houston, on a un problème…","…vous dézoomez plus vite que Voyager ne s'éloigne."],
+ ["Fin du système solaire (ou presque).","Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte."],
+ ["Stop ! Vous sortez de l'héliosphère.","Les Voyager ont mis plus de 35 ans à arriver ici. Vous, deux coups de molette."]];
+let lastJoke=0,jokeTimer;
+function tooFar(){const now=performance.now();if(now-lastJoke<2500)return;lastJoke=now;const j=JOKES[Math.floor(Math.random()*JOKES.length)];
+ const t=document.getElementById('toast');t.innerHTML=j[0]+'<small>'+j[1]+'</small>';t.classList.add('show');clearTimeout(jokeTimer);jokeTimer=setTimeout(()=>t.classList.remove('show'),3200)}
 // clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
 cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
  const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
@@ -463,7 +480,7 @@ function frame(now){
   body(moon(c,rad,per,ph,sim),R,'#e8e2d6','#7d776d',rad*cam.s>28?nm:null,'rgba(255,243,214,.75)',2.5)}
  // Voyager 1 & 2
  for(const v of VOY){const pts=v.legs.map(([n,d])=>planet(n,d));pts.push(voyPos(v,sim));
-  path(pts,v.col+'55',1.2,[6,5]);const q=S(pts[pts.length-1]),dist=norm(pts[pts.length-1])/AU;
+  const q=S(pts[pts.length-1]),dist=norm(pts[pts.length-1])/AU;
   const inView=q[0]>0&&q[0]<W&&q[1]>0&&q[1]<H;
   if(inView){cx.save();cx.translate(q[0],q[1]);cx.strokeStyle='#0b0d1f';cx.lineWidth=2;cx.fillStyle='#f3f3f3';
     cx.beginPath();cx.ellipse(0,0,7,3,-.5,0,7);cx.fill();cx.stroke();cx.beginPath();cx.moveTo(2,1);cx.lineTo(11,8);cx.strokeStyle=v.col;cx.stroke();cx.restore();
