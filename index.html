@@ -445,11 +445,14 @@ const toastEl=document.getElementById('toast');
 toastEl.innerHTML="Fin du système solaire.<small>Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte.</small>";
 // clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
 // raccourci caché : 5 clics / tapes rapides sur la carte → centrer et suivre (20736) Sultana
-let taps=[];
-function sultanaEgg(){setView('b:sultana');const el=document.getElementById('egg');el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500)}
+let taps=[],sultanaOn=false;
+function sultanaEgg(){sultanaOn=!sultanaOn;const el=document.getElementById('egg');
+ if(sultanaOn){setView('b:sultana');el.innerHTML="✦ (20736) SULTANA ✦<small>Astéroïde de la ceinture principale · 14,8 km · nommé d'après Robin Sultana (LIRA)</small>"}
+ else{if(target.view==='b:sultana')setView('sys');el.innerHTML="✦ SULTANA REPART SE CACHER ✦<small>5 nouvelles tapes pour le retrouver</small>"}
+ el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500)}
 cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
  const tnow=performance.now();taps=taps.filter(t=>tnow-t<1600);taps.push(tnow);if(taps.length>=5){taps=[];sultanaEgg();return}
- const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
+ const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.filter(d=>d[0]!=='sultana'||sultanaOn).map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
  for(const [v,n] of cands){const p=v==='probe'?probeState(sim).r:bodyPos(n,sim),q=S(p),d=Math.hypot(q[0]-e.clientX,q[1]-e.clientY);if(d<bd){bd=d;best=v}}
  if(best)setView(best)});
 cv.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
@@ -599,7 +602,7 @@ function drawFrame(now){
  }
  const far=cam.s*AU<45; // vue très large : on allège les éléments du système interne
  // planètes d'habillage (orbites + corps, en retrait)
- for(const [n,R,per,c1,c2,lb,mn] of DECOR){path(orbitPts(n,per),n==='sultana'?'rgba(255,79,163,.5)':'rgba(255,243,214,.24)',n==='sultana'?1.4:1,[2,5]);
+ for(const [n,R,per,c1,c2,lb,mn] of DECOR){if(n==='sultana'&&!sultanaOn)continue;path(orbitPts(n,per),n==='sultana'?'rgba(255,79,163,.5)':'rgba(255,243,214,.24)',n==='sultana'?1.4:1,[2,5]);
   const pp=bodyPos(n,sim),dq=S(pp);if(dq[0]<-60||dq[0]>W+60||dq[1]<-60||dq[1]>H+60)continue;
   cx.globalAlpha=.85;const deco=n==='jupiter'?(q,r)=>{if(r<6)return;cx.save();cx.beginPath();cx.arc(q[0],q[1],r,0,7);cx.clip();cx.fillStyle='rgba(150,90,50,.45)';
      for(const b of [-.45,-.15,.2,.5])cx.fillRect(q[0]-r,q[1]+b*r,2*r,r*.13);cx.fillStyle='rgba(200,80,50,.7)';cx.beginPath();cx.ellipse(q[0]+r*.3,q[1]+r*.32,r*.16,r*.09,0,0,7);cx.fill();cx.restore()}

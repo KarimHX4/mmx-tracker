@@ -1,5 +1,5 @@
 // MMX Tracker — service worker : fonctionne hors ligne, et récupère la dernière version de la page dès qu'il y a du réseau.
-const CACHE = 'mmx-tracker-v9';
+const CACHE = 'mmx-tracker-v10';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/mmx-192.png', './icons/mmx-512.png', './icons/mmx-180.png'];
 
 self.addEventListener('install', e => {
