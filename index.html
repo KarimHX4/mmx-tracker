@@ -114,7 +114,7 @@ button.on{background:var(--orange);color:var(--ink)}
 <div class="col" id="rightcol">
 <div class="panel" id="probe">
   <div id="shipView">
-  <div class="lbl">Fiche vaisseau</div>
+  <div class="lbl">Sonde</div>
   <canvas id="probeCv" width="560" height="400"></canvas>
   <div class="grid" style="margin-top:10px">
     <div><span>Masse au lancement</span>4 480 kg</div>
@@ -126,7 +126,7 @@ button.on{background:var(--orange);color:var(--ink)}
   <div id="chips"></div>
   </div>
   <div id="instView" hidden>
-    <button id="back">◀ Vaisseau</button>
+    <button id="back">◀ Sonde</button>
     <div id="iName"></div><div id="iFull"></div>
     <canvas id="instCv" width="560" height="360"></canvas>
     <div id="iDesc"></div>
@@ -447,19 +447,7 @@ function probeCard(now){
  // speed lines
  pcx.strokeStyle='rgba(65,224,255,.15)';pcx.lineWidth=2;for(let i=0;i<8;i++){const y=(i*53+now*.05)%400;pcx.beginPath();pcx.moveTo(0,y);pcx.lineTo(80+i*20,y);pcx.stroke()}
  const bob=Math.sin(now/700)*6;drawProbe(pcx,[280,205+bob],270,Math.sin(now/2300)*.06,now,true);
- const call=(x,y,tx,ty,t,col)=>{pcx.strokeStyle='#fff3d6';pcx.lineWidth=2;pcx.beginPath();pcx.moveTo(x,y+bob);pcx.lineTo(tx,ty);pcx.stroke();
-  pcx.font='19px Bungee';const w=pcx.measureText(t).width+12;pcx.fillStyle=col;pcx.strokeStyle='#0b0d1f';pcx.lineWidth=3;
-  const lx=Math.max(4,Math.min(556-w,tx-(tx<280?w:0)));pcx.fillRect(lx,ty-14,w,28);pcx.strokeRect(lx,ty-14,w,28);pcx.fillStyle='#0b0d1f';pcx.textAlign='left';pcx.fillText(t,lx+6,ty+7)};
- const P=(x,y)=>[280+4.5*x,205+4.5*y];
- const L=(xy,tx,ty,t,col)=>{const q=P(...xy);call(q[0],q[1]-bob,tx,ty,t,col)};
- L([-24,-19],120,30,'ANTENNE HGA','#ffd23f');
- L([10,-22],440,30,'PROPULSION','#ff7a2f');
- L([4,1.5],500,128,'RETOUR+CAPSULE','#fff3d6');
- L([-50,-6],110,96,'PANNEAUX','#41e0ff');
- L([-3,14],120,385,'EXPLORATION','#e8b23a');
- L([15,13],470,300,'IDEFIX','#ff4fa3');
- L([-14,25],70,330,'CAROTTIER','#fff3d6');
- L([15,30],500,375,'JAMBES','#d9dde8');
+
 }
 // ---------- instruments ----------
 const INST=[
