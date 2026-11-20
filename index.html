@@ -9,7 +9,7 @@
 :root{--ink:#0b0d1f;--night:#11163a;--cream:#fff3d6;--orange:#ff7a2f;--red:#e8433a;--cyan:#41e0ff;--yellow:#ffd23f;--mag:#ff4fa3}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--ink);color:var(--cream);font-family:'Space Mono',monospace;overflow:hidden}
-#sky{position:fixed;inset:0;display:block;cursor:grab}
+#sky{position:fixed;inset:0;display:block;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 #sky:active{cursor:grabbing}
 .halftone{position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,243,214,.06) 1px,transparent 1.3px);background-size:6px 6px;mix-blend-mode:screen}
 .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65))}
@@ -265,7 +265,17 @@ function freeView(){if(target.view!=='free'){target.view='free';document.querySe
 function zoomAt(f,px,py){ // zoom centré sur le curseur : le point du monde sous la souris reste fixe
  freeView();const [wx,wy]=toW(px,py);cam.s*=f;goalS=cam.s;
  cam.x=wx-(px-W/2)/cam.s;cam.y=wy+(py-H/2)/cam.s}
-cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
+// molette / trackpad : normalise les unités (Firefox macOS = lignes), gère le pincement trackpad (ctrlKey) et le défilement horizontal
+cv.addEventListener('wheel',e=>{e.preventDefault();
+ const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;let dy=e.deltaY*unit;
+ if(!dy&&e.deltaX)dy=e.deltaX*unit;
+ dy=Math.max(-300,Math.min(300,dy));
+ zoomAt(Math.exp(-dy*(e.ctrlKey?.01:.0015)),e.clientX,e.clientY)},{passive:false});
+// Safari (macOS) : pincement trackpad via les événements gesture*
+let gScale=1;
+cv.addEventListener('gesturestart',e=>{e.preventDefault();gScale=1});
+cv.addEventListener('gesturechange',e=>{e.preventDefault();const f=e.scale/gScale;gScale=e.scale;zoomAt(f,e.clientX||W/2,e.clientY||H/2)});
+cv.addEventListener('gestureend',e=>e.preventDefault());
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
