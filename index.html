@@ -331,7 +331,7 @@ function isTrackpad(e){ // défilement à deux doigts (pixels, fractions, axe ho
 cv.addEventListener('wheel',e=>{e.preventDefault();
  const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;
  if(e.ctrlKey){if(gActive)return;const dy=Math.max(-60,Math.min(60,e.deltaY*unit));zoomAt(Math.exp(-dy*.012),e.clientX,e.clientY);return} // pincement trackpad
- if(isTrackpad(e)){lastPad=performance.now();freeView();cam.x+=e.deltaX/cam.s;cam.y-=e.deltaY/cam.s;return} // deux doigts : déplacer
+ if(isTrackpad(e)){lastPad=performance.now();freeView();if(!atMax())cam.x+=e.deltaX/cam.s,cam.y-=e.deltaY/cam.s;return} // deux doigts : déplacer
  const dy=Math.max(-300,Math.min(300,e.deltaY*unit));zoomAt(Math.exp(-dy*.0015),e.clientX,e.clientY)},{passive:false}); // molette : zoom
 // Safari (macOS) : pincement trackpad via les événements gesture*
 let gScale=1;
@@ -341,9 +341,10 @@ cv.addEventListener('gestureend',e=>{e.preventDefault();gActive=false});
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};down={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
- cam.x-=dx/cam.s;cam.y+=dy/cam.s;drag={x:e.clientX,y:e.clientY}});
+ if(!atMax()){cam.x-=dx/cam.s;cam.y+=dy/cam.s}drag={x:e.clientX,y:e.clientY}});
 let down=null;
 // message affiché tant qu'on est au dézoom maximal (au-delà des Voyager)
+const atMax=()=>cam.s<=minScale()*1.02;
 const minScale=()=>Math.min(VW,VH)/(230000*AU); // bord externe du nuage d'Oort (~100 000 UA) visible
 // nuage d'Oort : coquille sphérique ~2 000 – 100 000 UA (nuage de Hills dense à l'intérieur), projeté sur l'écliptique
 const OORT=(()=>{let sd=12345;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;const a=[];
@@ -558,7 +559,8 @@ function frame(now){
  const nice=[1e3,2e3,5e3,1e4,2e4,5e4,1e5,2e5,5e5,1e6,2e6,5e6,1e7,2e7,5e7,1e8];let best=nice[0];for(const n of nice)if(n*cam.s<160)best=n;
  document.getElementById('scaleB').style.width=best*cam.s+'px';
  document.getElementById('scaleT').textContent=best>=1e6?(best/1e6)+' M km':best.toLocaleString('fr')+' km';
- toastEl.classList.toggle('show',cam.s<=minScale()*1.02);
+ const mx=atMax();toastEl.classList.toggle('show',mx);cv.style.cursor=mx?'default':'';
+ if(mx&&target.view==='free'){cam.x*=.8;cam.y*=.8} // au dézoom maximal : recentrage sur le Soleil, déplacement bloqué
  hud(P,E,M);
  if(curInst)drawInst(now);else probeCard(now);
  requestAnimationFrame(frame);
