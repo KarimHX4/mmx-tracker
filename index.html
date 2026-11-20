@@ -138,6 +138,10 @@ body.mobile #installBtn{margin:0 0 0 6px;vertical-align:4px;font-size:8px;paddin
 #installHelp section{background:var(--night);border:3px solid var(--cream);box-shadow:6px 6px 0 var(--orange);padding:18px 18px 14px;max-width:380px;font-size:13px;line-height:1.55}
 #installHelp section b:first-child{display:block;font-family:'Bungee';font-weight:normal;font-size:15px;color:var(--yellow);margin-bottom:8px}
 #installHelp button{margin-top:14px;float:right}
+#egg{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%) rotate(2deg) scale(.6);opacity:0;pointer-events:none;z-index:6;font-family:'Bungee';font-size:17px;text-align:center;
+ color:var(--ink);background:#ff4fa3;border:3px solid var(--ink);box-shadow:6px 6px 0 var(--yellow);padding:12px 18px;max-width:min(420px,84vw);transition:opacity .25s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+#egg.show{opacity:1;transform:translate(-50%,-50%) rotate(2deg) scale(1)}
+#egg small{display:block;font-family:'Space Mono';font-weight:700;font-size:11px;margin-top:5px}
 </style>
 </head>
 <body>
@@ -204,6 +208,7 @@ body.mobile #installBtn{margin:0 0 0 6px;vertical-align:4px;font-size:8px;paddin
 </div>
 
 <div id="toast"></div>
+<div id="egg">✦ (20736) SULTANA ✦<small>Astéroïde de la ceinture principale · 14,8 km · nommé d'après Robin Sultana (LIRA)</small></div>
 <div id="installHelp" hidden><section><div></div><button>OK</button></section></div>
 <div id="scale"><span id="scaleT"></span><div id="scaleB"></div></div>
 
@@ -385,7 +390,7 @@ function viewCenter(){const v=target.view,t=sim;
  if(v==='earth')return planet('earth',t);if(v==='mars')return planet('mars',t);if(v==='probe')return probeState(t).r;if(v.startsWith('b:'))return bodyPos(v.slice(2),t);return[0,0,0]}
 function setView(v){target.view=v;
  const m=Math.max(60,Math.min(VW,VH)||0);if(v.startsWith('b:')){const n=v.slice(2),ms=MOONS.filter(x=>x[0]===n).map(x=>x[2]),d=DECOR.find(x=>x[0]===n);
-  goalS=m/(ms.length?Math.max(...ms)*2.7:Math.max(d[1]*60,2e6));document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));return}
+  goalS=m/(n==='sultana'?0.35*AU:ms.length?Math.max(...ms)*2.7:Math.max(d[1]*60,2e6));document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));return}
  goalS={solar:m/(62*AU),sys:m/(3.55*AU),earth:m/(2.6*384400),mars:m/(2.8*23463),voy:m/(330*AU),probe:m/(0.12*AU)}[v];
  document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));}
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>setView(b.dataset.v));
@@ -439,7 +444,11 @@ const OORT=(()=>{let sd=12345;const rnd=()=>(sd=(sd*16807)%2147483647)/214748364
 const toastEl=document.getElementById('toast');
 toastEl.innerHTML="Fin du système solaire.<small>Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte.</small>";
 // clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
+// raccourci caché : 5 clics / tapes rapides sur la carte → centrer et suivre (20736) Sultana
+let taps=[];
+function sultanaEgg(){setView('b:sultana');const el=document.getElementById('egg');el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500)}
 cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
+ const tnow=performance.now();taps=taps.filter(t=>tnow-t<1600);taps.push(tnow);if(taps.length>=5){taps=[];sultanaEgg();return}
  const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
  for(const [v,n] of cands){const p=v==='probe'?probeState(sim).r:bodyPos(n,sim),q=S(p),d=Math.hypot(q[0]-e.clientX,q[1]-e.clientY);if(d<bd){bd=d;best=v}}
  if(best)setView(best)});
