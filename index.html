@@ -108,7 +108,7 @@ button.on{background:var(--orange);color:var(--ink)}
   </div>
 </div>
 
-<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette/pincement : zoom · glisser : déplacer.</div>
+<div id="note">Trajectoire reconstruite : transfert direct Terre→Mars (solution de Lambert, éphémérides képlériennes JPL) entre le lancement réel du 19/10/2026 19:41:03 UTC et une arrivée nominale au 15/08/2027 (JAXA annonce « août 2027 »). Position indicative, non issue de la télémétrie. Molette ou pincement : zoom centré sur le curseur · glisser ou deux doigts sur le trackpad : déplacer.</div>
 </div>
 
 <div class="col" id="rightcol">
@@ -249,16 +249,24 @@ function probeState(ms){
 
 // ---------- state ----------
 const cv=document.getElementById('sky'),cx=cv.getContext('2d');let W,H,DPR;
-function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0)}
-addEventListener('resize',resize);resize();
+let VX,VY,VW,VH; // centre et taille de la zone de carte visible entre les panneaux
+function layout(){const vis=el=>el&&getComputedStyle(el).display!=='none'?el.getBoundingClientRect():null;
+ const L=vis(document.getElementById('leftcol')),Rr=vis(document.getElementById('rightcol')),B=vis(document.getElementById('views'));
+ let l=0,r=W,t=0,b=H;
+ if(L&&L.width<W*.5)l=L.right+8; if(Rr&&Rr.width<W*.5)r=Rr.left-8; if(B)b=B.top-8;
+ if(L&&L.width>=W*.5){const st=document.getElementById('stats').getBoundingClientRect();if(b-st.bottom>H*.2)t=st.bottom+8} // mobile : panneaux en haut
+ if(r-l<W*.35){l=0;r=W} if(b-t<H*.2){t=0;b=H}
+ VX=(l+r)/2;VY=(t+b)/2;VW=r-l;VH=b-t}
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);layout()}
+resize();
 let live=true,speed=1,sim=Date.now(),lastReal=performance.now();
-let cam={x:0,y:0,s:Math.min(W,H)/(3.6*AU)},target={view:'sys'},goalS=cam.s;
+let cam={x:0,y:0,s:Math.min(VW,VH)/(3.6*AU)},target={view:'sys'},goalS=cam.s;
 const stars=[...Array(700)].map(()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.3+.2,p:Math.random()*6,c:Math.random()<.15?'#ffd2a8':Math.random()<.2?'#a8d8ff':'#fff'}));
 
 function viewCenter(){const v=target.view,t=sim;
  if(v==='earth')return planet('earth',t);if(v==='mars')return planet('mars',t);if(v==='probe')return probeState(t).r;return[0,0,0]}
 function setView(v){target.view=v;
- goalS={solar:Math.min(W,H)/(64*AU),sys:Math.min(W,H)/(3.6*AU),earth:Math.min(W,H)/(2.6*384400),mars:Math.min(W,H)/(2.8*23463),probe:Math.min(W,H)/(0.12*AU)}[v];
+ const m=Math.min(VW,VH);goalS={solar:m/(62*AU),sys:m/(3.55*AU),earth:m/(2.6*384400),mars:m/(2.8*23463),probe:m/(0.12*AU)}[v];
  document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));}
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>setView(b.dataset.v));
 document.getElementById('live').onclick=()=>{live=true;speed=1;sim=Date.now();marks()};
@@ -271,22 +279,29 @@ slider.oninput=()=>{live=false;speed=speed===1?86400:speed;sim=SL0+(SL1-SL0)*sli
 
 // pan / zoom
 let drag=null,pinch=null;
-const toW=(px,py)=>[cam.x+(px-W/2)/cam.s,cam.y-(py-H/2)/cam.s];
+const toW=(px,py)=>[cam.x+(px-VX)/cam.s,cam.y-(py-VY)/cam.s];
 function freeView(){if(target.view!=='free'){target.view='free';document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'))}}
 function zoomAt(f,px,py){ // zoom centré sur le curseur : le point du monde sous la souris reste fixe
  freeView();const [wx,wy]=toW(px,py);cam.s*=f;goalS=cam.s;
- cam.x=wx-(px-W/2)/cam.s;cam.y=wy+(py-H/2)/cam.s}
+ cam.x=wx-(px-VX)/cam.s;cam.y=wy+(py-VY)/cam.s}
 // molette / trackpad : normalise les unités (Firefox macOS = lignes), gère le pincement trackpad (ctrlKey) et le défilement horizontal
+let gActive=false,lastPad=0;
+function isTrackpad(e){ // défilement à deux doigts (pixels, fractions, axe horizontal, ou pas de 120 des molettes)
+ if(e.deltaMode!==0)return false;
+ if(e.deltaX!==0)return true;
+ if(e.wheelDeltaY!==undefined&&e.wheelDeltaY!==0&&Math.abs(e.wheelDeltaY)%120!==0)return true;
+ if(!Number.isInteger(e.deltaY))return true;
+ return performance.now()-lastPad<400&&Math.abs(e.deltaY)<60;}
 cv.addEventListener('wheel',e=>{e.preventDefault();
- const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;let dy=e.deltaY*unit;
- if(!dy&&e.deltaX)dy=e.deltaX*unit;
- dy=Math.max(-300,Math.min(300,dy));
- zoomAt(Math.exp(-dy*(e.ctrlKey?.01:.0015)),e.clientX,e.clientY)},{passive:false});
+ const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;
+ if(e.ctrlKey){if(gActive)return;const dy=Math.max(-60,Math.min(60,e.deltaY*unit));zoomAt(Math.exp(-dy*.012),e.clientX,e.clientY);return} // pincement trackpad
+ if(isTrackpad(e)){lastPad=performance.now();freeView();cam.x+=e.deltaX/cam.s;cam.y-=e.deltaY/cam.s;return} // deux doigts : déplacer
+ const dy=Math.max(-300,Math.min(300,e.deltaY*unit));zoomAt(Math.exp(-dy*.0015),e.clientX,e.clientY)},{passive:false}); // molette : zoom
 // Safari (macOS) : pincement trackpad via les événements gesture*
 let gScale=1;
-cv.addEventListener('gesturestart',e=>{e.preventDefault();gScale=1});
-cv.addEventListener('gesturechange',e=>{e.preventDefault();const f=e.scale/gScale;gScale=e.scale;zoomAt(f,e.clientX||W/2,e.clientY||H/2)});
-cv.addEventListener('gestureend',e=>e.preventDefault());
+cv.addEventListener('gesturestart',e=>{e.preventDefault();gScale=1;gActive=true});
+cv.addEventListener('gesturechange',e=>{e.preventDefault();const f=e.scale/gScale;gScale=e.scale;zoomAt(f,e.clientX||VX,e.clientY||VY)});
+cv.addEventListener('gestureend',e=>{e.preventDefault();gActive=false});
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
@@ -297,7 +312,7 @@ cv.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();
 cv.addEventListener('touchend',()=>pinch=null);
 
 // ---------- drawing ----------
-const S=(p)=>[W/2+(p[0]-cam.x)*cam.s,H/2-(p[1]-cam.y)*cam.s];
+const S=(p)=>[VX+(p[0]-cam.x)*cam.s,VY-(p[1]-cam.y)*cam.s];
 function path(pts,style,width,dash){cx.beginPath();pts.forEach((p,i)=>{const q=S(p);i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1])});
  cx.strokeStyle=style;cx.lineWidth=width;cx.setLineDash(dash||[]);cx.stroke();cx.setLineDash([])}
 const orbitCache={};
@@ -392,8 +407,6 @@ function frame(now){
  cx.globalAlpha=1;
  // grid rings (AU)
  const sun=S([0,0,0]);
- cx.strokeStyle='rgba(65,224,255,.07)';cx.lineWidth=1;
- for(let k=.5;k<=3;k+=.5){cx.beginPath();cx.arc(sun[0],sun[1],k*AU*cam.s,0,7);cx.stroke()}
  // sun
  const sr=Math.max(R_SUN*cam.s,9);
  const sg=cx.createRadialGradient(sun[0],sun[1],0,sun[0],sun[1],sr*5);sg.addColorStop(0,'rgba(255,230,140,.9)');sg.addColorStop(.25,'rgba(255,150,50,.35)');sg.addColorStop(1,'rgba(255,120,40,0)');
@@ -592,7 +605,10 @@ const DR={
 };
 function drawInst(t){g.clearRect(0,0,560,360);g.fillStyle='rgba(255,255,255,.7)';pstars.forEach(s=>g.fillRect(s[0],s[1]*.9,s[2],s[2]));g.lineJoin='round';DR[curInst.kind](t)}
 
+addEventListener('resize',()=>{resize();if(target.view!=='free')setView(target.view)});
 marks();setView('sys');cam.s=goalS;requestAnimationFrame(frame);
+// recale une fois les polices chargées (la taille des panneaux peut changer)
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{layout();if(target.view!=='free'){setView(target.view);cam.s=goalS}});
 })();
 </script>
 </body>
