@@ -130,6 +130,11 @@ body.mobile #scale div{margin:2px 0 0 auto}
 body.mobile #toast{top:42%;font-size:15px;max-width:86vw}
 #installBtn{margin:10px 0 0 6px;font-size:9px;padding:4px 7px;background:var(--cyan);color:var(--ink);box-shadow:2px 2px 0 var(--orange)}
 body.mobile #installBtn{margin:0 0 0 6px;vertical-align:4px;font-size:8px;padding:3px 6px}
+#installHelp{position:fixed;inset:0;z-index:20;background:rgba(5,6,18,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+#installHelp[hidden]{display:none}
+#installHelp section{background:var(--night);border:3px solid var(--cream);box-shadow:6px 6px 0 var(--orange);padding:18px 18px 14px;max-width:380px;font-size:13px;line-height:1.55}
+#installHelp section b:first-child{display:block;font-family:'Bungee';font-weight:normal;font-size:15px;color:var(--yellow);margin-bottom:8px}
+#installHelp button{margin-top:14px;float:right}
 </style>
 </head>
 <body>
@@ -196,6 +201,7 @@ body.mobile #installBtn{margin:0 0 0 6px;vertical-align:4px;font-size:8px;paddin
 </div>
 
 <div id="toast"></div>
+<div id="installHelp" hidden><section><div></div><button>OK</button></section></div>
 <div id="scale"><span id="scaleT"></span><div id="scaleB"></div></div>
 
 <div class="panel" id="views">
@@ -793,9 +799,19 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{layout();
 <script>
 // application installable (PWA) : hors ligne + bouton d'installation quand le navigateur le propose (Android, Chrome, Edge)
 if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-let deferredPrompt=null;const ib=document.getElementById('installBtn');
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;ib.hidden=false});
-ib.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice.catch(()=>{});deferredPrompt=null;ib.hidden=true});
+let deferredPrompt=null;const ib=document.getElementById('installBtn'),ih=document.getElementById('installHelp');
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ib.hidden=standalone; // toujours visible dans le navigateur, masqué dans l'app installée
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e});
+function helpText(){const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),android=/Android/.test(ua);
+ if(ios)return "<b>iPhone / iPad</b>Dans <b>Safari</b>, touchez le bouton <b>Partager</b> (carré avec une flèche ↑), puis <b>« Sur l'écran d'accueil »</b> et <b>Ajouter</b>.";
+ if(android)return "<b>Android</b>Dans <b>Chrome</b>, ouvrez le menu <b>⋮</b> (en haut à droite), puis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.<br><br>Si l'application est déjà installée, l'option n'apparaît pas : supprimez-la d'abord de l'écran d'accueil.";
+ if(/Firefox/.test(ua))return "<b>Firefox</b>Firefox sur ordinateur ne sait pas installer d'application web. Ouvrez la page dans <b>Chrome</b> ou <b>Edge</b>, ou sur votre téléphone.";
+ if(/Safari/.test(ua)&&!/Chrome/.test(ua))return "<b>Safari (Mac)</b>Menu <b>Fichier → « Ajouter au Dock »</b>.";
+ return "<b>Chrome / Edge</b>Cliquez sur l'icône d'installation à droite de la barre d'adresse, ou menu <b>⋮ → « Installer MMX Tracker »</b>.";}
+ib.addEventListener('click',async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice.catch(()=>{});deferredPrompt=null;return}
+ ih.querySelector('div').innerHTML=helpText();ih.hidden=false});
+ih.addEventListener('click',e=>{if(e.target===ih||e.target.closest('button'))ih.hidden=true});
 addEventListener('appinstalled',()=>{ib.hidden=true});
 </script>
 </body>
