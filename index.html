@@ -261,16 +261,18 @@ slider.oninput=()=>{live=false;speed=speed===1?86400:speed;sim=SL0+(SL1-SL0)*sli
 // pan / zoom
 let drag=null,pinch=null;
 const toW=(px,py)=>[cam.x+(px-W/2)/cam.s,cam.y-(py-H/2)/cam.s];
-function zoomAt(f,px,py){const [wx,wy]=toW(px,py);cam.s*=f;goalS=cam.s;
- if(target.view==='free'){cam.x=wx-(px-W/2)/cam.s;cam.y=wy+(py-H/2)/cam.s}}
+function freeView(){if(target.view!=='free'){target.view='free';document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'))}}
+function zoomAt(f,px,py){ // zoom centré sur le curseur : le point du monde sous la souris reste fixe
+ freeView();const [wx,wy]=toW(px,py);cam.s*=f;goalS=cam.s;
+ cam.x=wx-(px-W/2)/cam.s;cam.y=wy+(py-H/2)/cam.s}
 cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
 cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
 cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
- if(Math.abs(dx)+Math.abs(dy)>2&&target.view!=='free'){target.view='free';document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'))}
+ if(Math.abs(dx)+Math.abs(dy)>2)freeView();
  cam.x-=dx/cam.s;cam.y+=dy/cam.s;drag={x:e.clientX,y:e.clientY}});
 cv.addEventListener('pointerup',()=>drag=null);
 cv.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
- if(pinch)zoomAt(d/pinch,W/2,H/2);pinch=d}},{passive:false});
+ const mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;if(pinch)zoomAt(d/pinch,mx,my);pinch=d}},{passive:false});
 cv.addEventListener('touchend',()=>pinch=null);
 
 // ---------- drawing ----------
