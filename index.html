@@ -560,7 +560,9 @@ function frame(now){
  document.getElementById('scaleB').style.width=best*cam.s+'px';
  document.getElementById('scaleT').textContent=best>=1e6?(best/1e6)+' M km':best.toLocaleString('fr')+' km';
  const mx=atMax();toastEl.classList.toggle('show',mx);cv.style.cursor=mx?'default':'';
- if(mx&&target.view==='free'){cam.x*=.8;cam.y*=.8} // au dézoom maximal : recentrage sur le Soleil, déplacement bloqué
+ // la vue ne peut pas sortir du nuage d'Oort : le centre reste assez proche du Soleil pour que l'écran ne dépasse pas son bord (~105 000 UA)
+ {const rmax=Math.max(0,105000*AU-Math.min(VW,VH)/2/cam.s),rc=Math.hypot(cam.x,cam.y);
+  if(rc>rmax){const k=rmax/rc;if(target.view==='free'&&!drag){cam.x+=(cam.x*k-cam.x)*.35;cam.y+=(cam.y*k-cam.y)*.35}else{cam.x*=k;cam.y*=k}}}
  hud(P,E,M);
  if(curInst)drawInst(now);else probeCard(now);
  requestAnimationFrame(frame);
