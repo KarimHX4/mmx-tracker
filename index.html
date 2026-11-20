@@ -316,8 +316,8 @@ let drag=null,pinch=null;
 const toW=(px,py)=>[cam.x+(px-VX)/cam.s,cam.y-(py-VY)/cam.s];
 function freeView(){if(target.view!=='free'){target.view='free';document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'))}}
 function zoomAt(f,px,py){ // zoom centré sur le curseur : le point du monde sous la souris reste fixe
- freeView();const [wx,wy]=toW(px,py);const minS=Math.min(VW,VH)/(420*AU),maxS=3;
- if(cam.s*f<minS){if(f<1)tooFar();f=minS/cam.s}else if(cam.s*f>maxS)f=maxS/cam.s;
+ freeView();const [wx,wy]=toW(px,py);const minS=minScale(),maxS=3;
+ if(cam.s*f<minS){f=minS/cam.s}else if(cam.s*f>maxS)f=maxS/cam.s;
  cam.s*=f;goalS=cam.s;
  cam.x=wx-(px-VX)/cam.s;cam.y=wy+(py-VY)/cam.s}
 // molette / trackpad : normalise les unités (Firefox macOS = lignes), gère le pincement trackpad (ctrlKey) et le défilement horizontal
@@ -343,15 +343,10 @@ cv.addEventListener('pointermove',e=>{if(!drag||pinch)return;const dx=e.clientX-
  if(Math.abs(dx)+Math.abs(dy)>2)freeView();
  cam.x-=dx/cam.s;cam.y+=dy/cam.s;drag={x:e.clientX,y:e.clientY}});
 let down=null;
-// message quand on dézoome au-delà des Voyager
-const JOKES=[["Trop loin pour l'humanité !","Même Voyager 1 n'est pas allée plus loin. Inutile de continuer à dézoomer."],
- ["Ici s'arrête la carte.","Au-delà : 49 ans de voyage à 17 km/s… et toujours personne."],
- ["Houston, on a un problème…","…vous dézoomez plus vite que Voyager ne s'éloigne."],
- ["Fin du système solaire (ou presque).","Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte."],
- ["Stop ! Vous sortez de l'héliosphère.","Les Voyager ont mis plus de 35 ans à arriver ici. Vous, deux coups de molette."]];
-let lastJoke=0,jokeTimer;
-function tooFar(){const now=performance.now();if(now-lastJoke<2500)return;lastJoke=now;const j=JOKES[Math.floor(Math.random()*JOKES.length)];
- const t=document.getElementById('toast');t.innerHTML=j[0]+'<small>'+j[1]+'</small>';t.classList.add('show');clearTimeout(jokeTimer);jokeTimer=setTimeout(()=>t.classList.remove('show'),3200)}
+// message affiché tant qu'on est au dézoom maximal (au-delà des Voyager)
+const minScale=()=>Math.min(VW,VH)/(420*AU);
+const toastEl=document.getElementById('toast');
+toastEl.innerHTML="Fin du système solaire (ou presque).<small>Prochaine étoile : Proxima, dans environ 4,2 années-lumière. Prévoyez un casse-croûte.</small>";
 // clic sur un astre (sans glisser) : centrer et suivre, en cadrant ses lunes
 cv.addEventListener('pointerup',e=>{drag=null;if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>4)return;down=null;
  const cands=[['earth','earth'],['mars','mars'],['probe','probe'],...DECOR.map(d=>['b:'+d[0],d[0]])];let best=null,bd=16;
@@ -527,6 +522,7 @@ function frame(now){
  const nice=[1e3,2e3,5e3,1e4,2e4,5e4,1e5,2e5,5e5,1e6,2e6,5e6,1e7,2e7,5e7,1e8];let best=nice[0];for(const n of nice)if(n*cam.s<160)best=n;
  document.getElementById('scaleB').style.width=best*cam.s+'px';
  document.getElementById('scaleT').textContent=best>=1e6?(best/1e6)+' M km':best.toLocaleString('fr')+' km';
+ toastEl.classList.toggle('show',cam.s<=minScale()*1.02);
  hud(P,E,M);
  if(curInst)drawInst(now);else probeCard(now);
  requestAnimationFrame(frame);
