@@ -1,5 +1,5 @@
 // MMX Tracker — service worker : fonctionne hors ligne, et récupère la dernière version de la page dès qu'il y a du réseau.
-const CACHE = 'mmx-tracker-v10';
+const CACHE = 'mmx-tracker-v11';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/mmx-192.png', './icons/mmx-512.png', './icons/mmx-180.png'];
 
 self.addEventListener('install', e => {
@@ -12,9 +12,9 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // page : réseau d'abord (mises à jour hebdomadaires des jalons), cache si hors ligne
+  // page : toujours la version du serveur (sans cache HTTP, sinon GitHub Pages peut renvoyer une version de 10 min), cache seulement hors ligne
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
-    e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', cp)); return r; })
+    e.respondWith(fetch(req, { cache: 'no-store' }).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', cp)); return r; })
       .catch(() => caches.match('./index.html')));
     return;
   }

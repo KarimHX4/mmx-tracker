@@ -838,7 +838,7 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{layout();
 </script>
 <script>
 // application installable (PWA) : hors ligne + bouton d'installation quand le navigateur le propose (Android, Chrome, Edge)
-if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 let deferredPrompt=null;const ib=document.getElementById('installBtn'),ih=document.getElementById('installHelp');
 const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 ib.hidden=standalone; // toujours visible dans le navigateur, masqué dans l'app installée
