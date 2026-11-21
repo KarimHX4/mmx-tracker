@@ -321,9 +321,10 @@ const VOY=[{id:'VOYAGER 1',lon:255.0,lat:35.0,r0:155.36,v:3.58,col:'#7cf0c0',leg
  {id:'VOYAGER 2',lon:289.3,lat:-31.2,r0:129.28,v:3.23,col:'#ffb36b',legs:[['earth',Date.UTC(1977,7,20)],['jupiter',Date.UTC(1979,6,9)],['saturn',Date.UTC(1981,7,26)],['uranus',Date.UTC(1986,0,24)],['neptune',Date.UTC(1989,7,25)]]}];
 const voyPos=(v,ms)=>{const r=(v.r0+v.v*(ms-Date.UTC(2022,0,1))/(365.25*864e5))*AU,la=v.lat*DEG,lo=v.lon*DEG;return[r*Math.cos(la)*Math.cos(lo),r*Math.cos(la)*Math.sin(lo),r*Math.sin(la)]};
 function solveE(M,e){let E=e<.8?M:Math.PI;for(let i=0;i<30;i++){const d=(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));E-=d;if(Math.abs(d)<1e-13)break}return E}
-function planet(name,ms){
- const T=(ms/864e5+2440587.5-2451545)/36525, p=EL[name];
- const a=(p[0]+p[1]*T)*AU,e=p[2]+p[3]*T,I=(p[4]+p[5]*T)*DEG,L=(p[6]+p[7]*T)*DEG,vp=(p[8]+p[9]*T)*DEG,Om=(p[10]+p[11]*T)*DEG;
+// msFix (facultatif) : fige la forme de l'orbite à cette date (seule la position sur l'orbite avance) → ellipse fermée passant par l'astre
+function planet(name,ms,msFix){
+ const T=(ms/864e5+2440587.5-2451545)/36525, Tf=msFix===undefined?T:(msFix/864e5+2440587.5-2451545)/36525, p=EL[name];
+ const a=(p[0]+p[1]*Tf)*AU,e=p[2]+p[3]*Tf,I=(p[4]+p[5]*Tf)*DEG,L=(p[6]+p[7]*T)*DEG,vp=(p[8]+p[9]*Tf)*DEG,Om=(p[10]+p[11]*Tf)*DEG;
  const w=vp-Om; let M=((L-vp)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI;
  const E=solveE(M,e), x=a*(Math.cos(E)-e), y=a*Math.sqrt(1-e*e)*Math.sin(E);
  const cw=Math.cos(w),sw=Math.sin(w),cO=Math.cos(Om),sO=Math.sin(Om),cI=Math.cos(I),sI=Math.sin(I);
@@ -467,12 +468,22 @@ function clipSeg(x0,y0,x1,y1,a,b,c,d){let t0=0,t1=1;const dx=x1-x0,dy=y1-y0;
  return [x0+t0*dx,y0+t0*dy,x0+t1*dx,y0+t1*dy]}
 function path(pts,style,width,dash){const m=60,a=-m,b=-m,c=W+m,d=H+m;cx.beginPath();let prev=null,px=NaN,py=NaN,any=false;
  for(const p of pts){const q=S(p);if(prev){const r=clipSeg(prev[0],prev[1],q[0],q[1],a,b,c,d);
-   if(r){if(Math.abs(r[0]-px)>.5||Math.abs(r[1]-py)>.5)cx.moveTo(r[0],r[1]);cx.lineTo(r[2],r[3]);px=r[2];py=r[3];any=true}}prev=q}
+   if(r){if(!(Math.abs(r[0]-px)<=.5&&Math.abs(r[1]-py)<=.5))cx.moveTo(r[0],r[1]);cx.lineTo(r[2],r[3]);px=r[2];py=r[3];any=true}}prev=q}
  if(!any)return;cx.strokeStyle=style;cx.lineWidth=width;cx.setLineDash(dash||[]);cx.stroke();cx.setLineDash([])}
-const orbitCache={};
-function orbitPts(n,per){const k=n+Math.floor(sim/864e5/30);if(orbitCache[n]&&orbitCache[n].k===k)return orbitCache[n].p;
- const p=[];for(let i=0;i<=360;i++)p.push(bodyPos(n,sim+per*864e5*i/360));orbitCache[n]={k,p};return p}
-function circlePts(c,r){const p=[];for(let i=0;i<=120;i++){const a=i/120*2*Math.PI;p.push([c[0]+r*Math.cos(a),c[1]+r*Math.sin(a),0])}return p}
+// courbe échantillonnée de façon adaptative : on subdivise les morceaux visibles tant que la corde s'écarte de la vraie courbe de plus de ~0,3 px.
+// Sans ça, au fort zoom, les cordes droites entre points d'orbite passent à côté des planètes (l'orbite « ne touche plus » l'astre).
+function curve(f,a,b,n0){const out=[],m=250,vis=(...qs)=>!(qs.every(q=>q[0]<-m)||qs.every(q=>q[0]>W+m)||qs.every(q=>q[1]<-m)||qs.every(q=>q[1]>H+m));
+ let ta=a,pa=f(a),qa=S(pa);out.push(pa);
+ const ref=(ta,pa,qa,tb,pb,qb,d)=>{const tm=(ta+tb)/2,pm=f(tm),qm=S(pm);
+  if(d<48&&vis(qa,qm,qb)&&Math.hypot(qm[0]-(qa[0]+qb[0])/2,qm[1]-(qa[1]+qb[1])/2)>.3&&Math.hypot(qb[0]-qa[0],qb[1]-qa[1])>1.5){ref(ta,pa,qa,tm,pm,qm,d+1);ref(tm,pm,qm,tb,pb,qb,d+1)}
+  else out.push(pb)};
+ for(let i=1;i<=n0;i++){const tb=a+(b-a)*i/n0,pb=f(tb),qb=S(pb);ref(ta,pa,qa,tb,pb,qb,0);ta=tb;pa=pb;qa=qb}
+ return out}
+// orbite d'un astre : un tour complet centré sur sa position actuelle (l'astre est au milieu du tracé, pas à une jonction),
+// avec la période sidérale exacte des éléments utilisés, pour que le tracé se referme sans décalage
+const periodDays=n=>SB[n]?360/(0.9856076686/Math.pow(SB[n][0],1.5)):36000*365.25/EL[n][7];
+function orbitPts(n){const P=periodDays(n)*864e5,t0=sim;return curve(SB[n]?t=>smallBody(n,t):t=>planet(n,t,t0),sim-P/2,sim+P/2,96)}
+function circlePts(c,r){return curve(a=>[c[0]+r*Math.cos(a),c[1]+r*Math.sin(a),c[2]||0],0,2*Math.PI,48)}
 function label(q,txt,col,dy=-14){cx.font="11px Bungee";cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#0b0d1f';cx.strokeText(txt,q[0],q[1]+dy);cx.fillStyle=col;cx.fillText(txt,q[0],q[1]+dy)}
 function body(p,R,base,shade,name,col,minPx,deco){const q=S(p),r=Math.max(R*cam.s,minPx);
  if(q[0]<-r-50||q[0]>W+r+50||q[1]<-r-50||q[1]>H+r+50)return q;
@@ -602,7 +613,7 @@ function drawFrame(now){
  }
  const far=cam.s*AU<45; // vue très large : on allège les éléments du système interne
  // planètes d'habillage (orbites + corps, en retrait)
- for(const [n,R,per,c1,c2,lb,mn] of DECOR){if(n==='sultana'&&!sultanaOn)continue;path(orbitPts(n,per),n==='sultana'?'rgba(255,79,163,.5)':'rgba(255,243,214,.24)',n==='sultana'?1.4:1,[2,5]);
+ for(const [n,R,per,c1,c2,lb,mn] of DECOR){if(n==='sultana'&&!sultanaOn)continue;path(orbitPts(n),n==='sultana'?'rgba(255,79,163,.5)':'rgba(255,243,214,.24)',n==='sultana'?1.4:1,[2,5]);
   const pp=bodyPos(n,sim),dq=S(pp);if(dq[0]<-60||dq[0]>W+60||dq[1]<-60||dq[1]>H+60)continue;
   cx.globalAlpha=.85;const deco=n==='jupiter'?(q,r)=>{if(r<6)return;cx.save();cx.beginPath();cx.arc(q[0],q[1],r,0,7);cx.clip();cx.fillStyle='rgba(150,90,50,.45)';
      for(const b of [-.45,-.15,.2,.5])cx.fillRect(q[0]-r,q[1]+b*r,2*r,r*.13);cx.fillStyle='rgba(200,80,50,.7)';cx.beginPath();cx.ellipse(q[0]+r*.3,q[1]+r*.32,r*.16,r*.09,0,0,7);cx.fill();cx.restore()}
@@ -640,10 +651,11 @@ function drawFrame(now){
     cx.beginPath();cx.moveTo(12,0);cx.lineTo(-6,-7);cx.lineTo(-6,7);cx.closePath();cx.fill();cx.stroke();cx.restore();
     label([ex-Math.cos(a)*30,ey-Math.sin(a)*30],v.id+' · '+dist.toFixed(0)+' UA →',v.col,4)}}
  // orbits
- path(orbitPts('earth',365.25),'rgba(65,224,255,.45)',1.5,[2,5]);
- path(orbitPts('mars',686.98),'rgba(255,122,47,.5)',1.5,[2,5]);
+ path(orbitPts('earth'),'rgba(65,224,255,.45)',1.5,[2,5]);
+ path(orbitPts('mars'),'rgba(255,122,47,.5)',1.5,[2,5]);
  // transfer arc
- const done=ARC.filter(a=>a[0]<=sim).map(a=>a[1]),todo=ARC.filter(a=>a[0]>=sim).map(a=>a[1]);
+ const tr=t=>transfer(t).r,tc=Math.min(Math.max(sim,LAUNCH),ARRIVAL),fr=(tc-LAUNCH)/(ARRIVAL-LAUNCH);
+ const done=sim>LAUNCH?curve(tr,LAUNCH,tc,Math.max(2,Math.round(120*fr))):[],todo=sim<ARRIVAL?curve(tr,tc,ARRIVAL,Math.max(2,Math.round(120*(1-fr)))):[];
  if(todo.length>1)path(todo,'rgba(255,210,63,.7)',2,[8,6]);
  if(done.length>1){path(done,'rgba(255,79,163,.25)',8);path(done,'#ff4fa3',2.5)}
  // ghost markers: launch & arrival
